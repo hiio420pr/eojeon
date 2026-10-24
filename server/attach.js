@@ -56,33 +56,56 @@ export async function run(args) {
 
   const rt = readRuntime();
   let ws = null;
-  if (rt) {
-    const r = await connect(rt, path.basename(cwd), cols, rows);
-    ws = r.ws;
-    if (!ws) console.error(`어전에 연결하지 못했습니다 (${r.why}). 그냥 claude 로 실행합니다.`);
-  } else {
-    console.error('어전이 꺼져 있습니다(npx eojeon-cli). 그냥 claude 로 실행합니다.');
-  }
+  let pty = null;
   const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
 
-  const claudeArgs = ws && rt.settings && fs.existsSync(rt.settings) ? ['--settings', rt.settings, ...args] : args;
+  // (re)connect to the court; when it is busy or off, keep trying quietly so the mirror starts as soon as it can
+  let connecting = false;
+  async function tryAttach() {
+    if (ws || connecting) return;
+    const now = readRuntime();
+    if (!now) return;
+    connecting = true;
+    const r = await connect(now, path.basename(cwd), cols, rows);
+    connecting = false;
+    if (!r.ws) return;
+    ws = r.ws;
+    ws.on('message', (raw) => {
+      let m;
+      try { m = JSON.parse(raw.toString()); } catch { return; }
+      if (m.t === 'input' && typeof m.d === 'string' && pty) pty.write(m.d);
+    });
+    ws.on('close', () => {
+      ws = null;
+    });
+    // make claude redraw its whole screen so the court sees it from the top
+    if (pty) {
+      try {
+        pty.resize(cols, Math.max(5, rows - 1));
+        setTimeout(() => { try { pty.resize(cols, rows); } catch {} }, 80);
+      } catch {}
+    }
+  }
+
+  if (rt) {
+    await tryAttach();
+    if (!ws) console.error('어전이 바쁘거나 응답이 없습니다. claude 를 먼저 띄우고, 어전이 비면 자동으로 연결합니다.');
+  } else {
+    console.error('어전이 꺼져 있습니다(npx eojeon-cli). 어전을 켜면 자동으로 연결합니다.');
+  }
+  const retry = setInterval(tryAttach, 3000);
+  retry.unref?.();
+
+  // hooks: the court's settings when known (they find the court through the token in that file)
+  const settings = (readRuntime() || {}).settings;
+  const claudeArgs = settings && fs.existsSync(settings) ? ['--settings', settings, ...args] : args;
   const { spawn } = loadPty();
-  const pty = spawn(claude, claudeArgs, { name: 'xterm-256color', cols, rows, cwd, env: childEnv() });
+  pty = spawn(claude, claudeArgs, { name: 'xterm-256color', cols, rows, cwd, env: childEnv() });
 
   pty.onData((d) => {
     process.stdout.write(d);
     send({ t: 'tout', d });
   });
-  if (ws) {
-    ws.on('message', (raw) => {
-      let m;
-      try { m = JSON.parse(raw.toString()); } catch { return; }
-      if (m.t === 'input' && typeof m.d === 'string') pty.write(m.d);
-    });
-    ws.on('close', () => {
-      ws = null; // the court went away; keep working locally
-    });
-  }
 
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
   process.stdin.setEncoding('utf8');
@@ -96,6 +119,7 @@ export async function run(args) {
   });
 
   pty.onExit(({ exitCode }) => {
+    clearInterval(retry);
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
     try { ws?.close(); } catch {}
     process.exit(exitCode ?? 0);

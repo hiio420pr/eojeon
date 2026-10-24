@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.3.1] - 2026-10-25
+
+### Fixed
+- `eojeon claude` no longer gives up when the court is busy (another claude already running in it) or not started yet: it keeps trying every 3 s and attaches as soon as the court is free, then makes claude redraw so the web shows the full screen.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added
@@ -43,6 +48,7 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.3.1]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.1
 [0.3.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.1.0
