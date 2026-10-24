@@ -61,6 +61,7 @@ npm start          # = node cli/eojeon.js
 | `--port <n>` | 포트 (기본 4747, 사용 중이면 다음 빈 포트) |
 | `--cwd <폴더>` | 시작 화면의 기본 작업 폴더 |
 | `--no-open` | 브라우저를 열지 않음 |
+| `eojeon claude [claude 옵션…]` | **내 터미널에서** claude 를 켜고 그 화면을 어전에 실시간으로 그대로 띄움. 웹에서 친 글자·윤허 도장도 이 터미널의 claude 로 들어감. 예: `eojeon claude --continue` |
 | `eojeon watch` / `eojeon watch --off` | 어전 밖(다른 터미널·IDE)에서 쓰는 Claude Code 도 화면에 보이게 / 끄기. 아래 '이미 쓰던 Claude Code 보기' |
 | `--host <주소>` | 다른 기기(Tailscale·같은 와이파이)에서 접속 허용. 접속 키 필요. 아래 '다른 기기에서 보기' |
 | `--new-key` | `--host` 와 함께: 접속 키 새로 만들기(예전 주소는 막힘) |
@@ -110,6 +111,19 @@ npm start          # = node cli/eojeon.js
 - **장면**: 교지 반포 → 임금이 두루마리를 듦 · 도구 사용 → 담당 신하가 붓질하며 말풍선 · 서브에이전트 시작 → 그 관직의 신하가 입궐해 자기 책상으로, 끝나면 영의정께 보고하고 퇴궐 · 권한 요청 → 오른쪽 위에 "윤허를 청하옵니다" 패널과 **윤허 / 불허 / 보류** 도장(터미널 권한 창에 실제 키 전송: 윤허=`1`, 불허=`Esc`) · 실패 → 먹물 얼룩 말풍선.
 - 말풍선은 겹치지 않게 자리를 엇갈리고, 한 번에 3개까지만 보입니다. 나머지는 **사관 일지**(오른쪽)에 모두 남습니다.
 - **입력은 터미널 하나**: 컴퓨터에서는 아래 터미널에 바로 칩니다. 휴대폰·태블릿(터치 화면)에서만 터미널 아래에 **교지 쓰기** 칸이 보입니다(터치 키보드로 터미널에 한글을 치기 어려워서). Enter 하면 터미널에 그대로 들어갑니다.
+
+### 내 터미널을 어전에 그대로 (`eojeon claude`)
+
+어전 화면 안이 아니라 평소 쓰는 터미널에서 일하면서, 웹(다른 기기 포함)에도 **같은 CLI 화면과 궁궐 장면**이 실시간으로 보이게 합니다.
+
+```bash
+npx eojeon-cli                     # 어전을 켜 두고
+npx eojeon-cli claude --continue   # 다른 터미널에서 claude 대신 이렇게 실행 (claude 옵션은 그대로 넘어감)
+```
+
+- 웹 하단 터미널은 그 터미널의 화면을 그대로 보여 줍니다(크기도 그 터미널을 따름). 웹에서 입력하거나 윤허·불허 도장을 눌러도 그 claude 로 들어갑니다.
+- 어전이 꺼져 있으면 그냥 평범한 claude 로 실행됩니다.
+- 한 번에 하나만 연결됩니다. 어전 안에서 입궐한 claude 가 있으면 먼저 퇴청하세요.
 
 ### 이미 쓰던 Claude Code 보기 (`eojeon watch`)
 
@@ -213,6 +227,8 @@ claude plugin validate .
 1. **npx**: `npx eojeon-cli` → http://localhost:4747 · `npx eojeon-cli demo` (no claude, no usage) · `npx eojeon-cli init` (add the Six Ministries to `./.claude/agents`)
 2. **Claude Code plugin**: `/plugin marketplace add hiio420pr/eojeon` then `/plugin install eojeon@eojeon` (or on 2.1.275+: `/plugin install eojeon --marketplace hiio420pr/eojeon`). Then type `/eojeon` or "open the court". Third-party marketplaces don't auto-update by default: run `/plugin` → Marketplaces → eojeon → Enable auto-update (or `/plugin marketplace update eojeon`). You don't need both npx and the plugin. The plugin also provides the six agents as `eojeon:ijo` … `eojeon:gongjo`.
 3. **git clone**: `git clone https://github.com/hiio420pr/eojeon.git && cd eojeon && npm install && npm start`
+
+**Mirror your own terminal**: run `npx eojeon-cli claude [claude flags…]` (e.g. `--continue`) in any terminal while the court is running. The web shows that exact CLI screen live, and web input / permission stamps go into it. Without a running court it is plain claude.
 
 **Watch sessions you already run elsewhere**: `npx eojeon-cli watch` adds hooks to `~/.claude/settings.json` (backup kept) so any Claude Code session (other terminals, IDEs) shows up in the court while it runs — watch-only, answer its prompts in its own terminal. `eojeon watch --off` removes only our hooks.
 

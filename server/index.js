@@ -16,6 +16,7 @@ import { listSessions } from './sessions.js';
 import { sanitize } from './sanitize.js';
 import { inspect as inspectAgents, install as installAgents, PACKS } from './agents.js';
 import { HOOK_EVENTS, eojeonDir, runtimeFile } from './watch.js';
+import { findClaude, loadPty, childEnv } from './pty.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,20 +61,6 @@ function expandHome(p) {
 }
 
 // ---------- claude binary ----------
-function findClaude() {
-  if (process.env.COURT_CLAUDE_BIN) return process.env.COURT_CLAUDE_BIN;
-  const names = process.platform === 'win32' ? ['claude.exe', 'claude.cmd', 'claude'] : ['claude'];
-  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
-    for (const n of names) {
-      const p = path.join(dir, n);
-      try {
-        if (fs.statSync(p).isFile()) return p;
-      } catch {}
-    }
-  }
-  const local = path.join(os.homedir(), '.local', 'bin', 'claude');
-  return fs.existsSync(local) ? local : null;
-}
 const CLAUDE = findClaude();
 
 // ---------- temp settings with hooks ----------
@@ -95,7 +82,7 @@ function writeSettings(port) {
   // lets `eojeon watch` hooks (sessions outside the court) find this server
   try {
     fs.mkdirSync(eojeonDir(), { recursive: true, mode: 0o700 });
-    fs.writeFileSync(runtimeFile(), JSON.stringify({ port, token: TOKEN, pid: process.pid }), { mode: 0o600 });
+    fs.writeFileSync(runtimeFile(), JSON.stringify({ port, token: TOKEN, pid: process.pid, settings: settingsPath }), { mode: 0o600 });
   } catch {}
 }
 
@@ -111,6 +98,9 @@ function cleanup() {
 // ---------- state ----------
 let pty = null;
 let ptyInfo = null; // { cwd, mode, sessionId, startedAt }
+// `eojeon claude` in another terminal: its screen is mirrored here and web input goes back to it
+let mirror = null; // { ws, cols, rows }
+const isRunning = () => !!pty || !!mirror;
 let outBuf = '';
 const OUT_MAX = 256 * 1024;
 const events = [];
@@ -133,28 +123,6 @@ function sysEvent(type, extra = {}) {
   pushEvent({ type, time: Date.now(), ...extra });
 }
 
-// node-pty ships prebuilt binaries for macOS (arm64/x64) and Windows (x64/arm64).
-// On Linux the prebuilt fork @homebridge/node-pty-prebuilt-multiarch is used instead.
-// Both are optionalDependencies so `npx eojeon-cli` never fails to install (demo still works).
-const PTY_MODULES = ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
-let ptyMod = null;
-function loadPty() {
-  if (ptyMod) return ptyMod;
-  const errors = [];
-  for (const name of PTY_MODULES) {
-    try {
-      ptyMod = require(name);
-      return ptyMod;
-    } catch (e) {
-      errors.push(`${name}: ${String(e.message).split('\n')[0]}`);
-    }
-  }
-  throw new Error(
-    '터미널 모듈(node-pty)을 불러오지 못했습니다. `npm i -g eojeon` 으로 다시 설치하거나 빌드 도구(python3, make, C++ 컴파일러)를 설치해 주세요. ' +
-      'Could not load node-pty. ' + errors.join(' | '),
-  );
-}
-
 // `claude --help` → --permission-mode choices. bypassPermissions is left out on purpose:
 // with it no petition ever reaches the court, and it skips every safety prompt.
 export const PERMISSION_MODES = ['manual', 'acceptEdits', 'plan', 'auto', 'dontAsk'];
@@ -164,6 +132,7 @@ function startClaude({ cwd, mode, sessionId, permissionMode }) {
   if (!CLAUDE) throw new Error('PATH 에서 claude 를 찾지 못했습니다. Claude Code 를 먼저 설치하세요.');
   const dir = path.resolve(expandHome(cwd || DEFAULT_CWD));
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error(`폴더가 없습니다: ${dir}`);
+  if (mirror) throw new Error('다른 터미널의 claude(eojeon claude)가 연결돼 있습니다. 그 터미널에서 끝낸 뒤 입궐하세요.');
   stopClaude();
   const args = ['--settings', settingsPath];
   if (mode === 'continue') args.push('--continue');
@@ -178,16 +147,7 @@ function startClaude({ cwd, mode, sessionId, permissionMode }) {
     args.push('--permission-mode', permissionMode);
   }
 
-  const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', FORCE_COLOR: '1' };
-  // if this server itself was started from inside Claude Code, don't let the child think it's nested
-  // (session-scoped markers only; user config such as CLAUDE_CODE_USE_BEDROCK is kept)
-  for (const k of [
-    'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSION_ID',
-    'CLAUDE_CODE_SESSION_ATTENDED', 'CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_MESSAGING_SOCKET',
-    'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_CODE_BRIDGE_SESSION_ID', 'CLAUDE_CODE_EXECPATH', 'CLAUDE_PID', 'CLAUDE_EFFORT',
-  ]) delete env[k];
-  for (const k of Object.keys(env)) if (k.startsWith('npm_')) delete env[k];
-  env.EOJEON_CHILD = '1'; // `eojeon watch` hooks skip this session (it already reports through --settings)
+  const env = childEnv();
 
   const { spawn } = loadPty();
   pty = spawn(CLAUDE, args, { name: 'xterm-256color', cols: size.cols, rows: size.rows, cwd: dir, env });
@@ -360,7 +320,7 @@ async function handle(req, res) {
   if (p === '/api/info') {
     return json(res, 200, {
       app: 'eojeon', version: VERSION,
-      demo: DEMO, defaultCwd: DEFAULT_CWD, claudeFound: !!CLAUDE, running: !!pty, info: ptyInfo,
+      demo: DEMO, defaultCwd: DEFAULT_CWD, claudeFound: !!CLAUDE, running: isRunning(), info: ptyInfo,
       home: os.homedir(), platform: process.platform, permissionModes: PERMISSION_MODES, remote: REMOTE,
     });
   }
@@ -422,18 +382,69 @@ function makeServer() {
 const server = makeServer();
 const WILDCARD = HOST === '0.0.0.0' || HOST === '::';
 
-wss.on('connection', (ws) => {
+function attachMirror(ws, m) {
+  if (pty) throw new Error('어전 안에서 claude 가 이미 돌고 있습니다. 화면에서 퇴청한 뒤 다시 시도하세요.');
+  if (mirror) throw new Error('다른 터미널이 이미 연결돼 있습니다.');
+  clients.delete(ws); // the mirror is a source, not a viewer
+  mirror = { ws, cols: Math.max(20, Math.min(400, m.cols | 0)), rows: Math.max(5, Math.min(200, m.rows | 0)) };
+  ptyInfo = { folder: String(m.folder || '').slice(0, 64), mode: 'mirror', startedAt: Date.now() };
+  outBuf = '';
+  ws.send(JSON.stringify({ t: 'attached' }));
+  broadcast({ t: 'started', info: ptyInfo, size: { cols: mirror.cols, rows: mirror.rows } });
+  sysEvent('PtyStart', { folder: ptyInfo.folder, mode: 'mirror' });
+  ws.on('close', () => {
+    if (mirror?.ws !== ws) return;
+    mirror = null;
+    broadcast({ t: 'exit', code: 0, mirror: true });
+    sysEvent('PtyExit', { code: 0 });
+  });
+}
+
+wss.on('connection', (ws, req) => {
   clients.add(ws);
-  ws.send(JSON.stringify({ t: 'hello', demo: DEMO, running: !!pty, info: ptyInfo, history: events.slice(-200) }));
-  if (pty && outBuf) ws.send(JSON.stringify({ t: 'out', d: outBuf, replay: true }));
+  ws.send(JSON.stringify({
+    t: 'hello', demo: DEMO, running: isRunning(), info: ptyInfo, history: events.slice(-200),
+    size: mirror ? { cols: mirror.cols, rows: mirror.rows } : null,
+  }));
+  if (isRunning() && outBuf) ws.send(JSON.stringify({ t: 'out', d: outBuf, replay: true }));
   ws.on('message', (raw) => {
     let m;
     try { m = JSON.parse(raw.toString()); } catch { return; }
+    // messages from the attached terminal itself
+    if (mirror && ws === mirror.ws) {
+      if (m.t === 'tout' && typeof m.d === 'string') {
+        outBuf += m.d;
+        if (outBuf.length > OUT_MAX) outBuf = outBuf.slice(outBuf.length - OUT_MAX);
+        broadcast({ t: 'out', d: m.d });
+      } else if (m.t === 'tsize') {
+        mirror.cols = Math.max(20, Math.min(400, m.cols | 0));
+        mirror.rows = Math.max(5, Math.min(200, m.rows | 0));
+        broadcast({ t: 'size', cols: mirror.cols, rows: mirror.rows });
+      }
+      return;
+    }
     switch (m.t) {
+      case 'attach':
+        // only a process on this computer that can read ~/.eojeon/runtime.json
+        if (!fromLoopback(req) || m.token !== TOKEN) {
+          ws.send(JSON.stringify({ t: 'error', message: 'attach refused' }));
+          ws.close();
+          break;
+        }
+        try {
+          attachMirror(ws, m);
+        } catch (e) {
+          ws.send(JSON.stringify({ t: 'error', message: e.message }));
+          ws.close();
+        }
+        break;
       case 'input':
-        if (pty && typeof m.d === 'string') pty.write(m.d);
+        if (typeof m.d !== 'string') break;
+        if (pty) pty.write(m.d);
+        else if (mirror && mirror.ws.readyState === 1) mirror.ws.send(JSON.stringify({ t: 'input', d: m.d }));
         break;
       case 'resize': {
+        if (mirror) break; // the other terminal decides the size
         const cols = Math.max(20, Math.min(400, m.cols | 0));
         const rows = Math.max(5, Math.min(200, m.rows | 0));
         size = { cols, rows };
@@ -448,7 +459,8 @@ wss.on('connection', (ws) => {
         }
         break;
       case 'stop':
-        stopClaude();
+        if (mirror) ws.send(JSON.stringify({ t: 'error', message: '연결된 터미널의 claude 는 그 터미널에서 끝내세요 (/exit).' }));
+        else stopClaude();
         break;
       default:
         break;

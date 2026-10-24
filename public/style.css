@@ -285,6 +285,8 @@ body { height: 100vh; }
 /* ---------- terminal ---------- */
 .term { flex: 1; min-height: 0; padding: 6px 0 0 8px; background: var(--paper); }
 .term .xterm { height: 100%; }
+.term.mirror { overflow: auto; }
+.term.mirror .xterm { height: auto; }
 .term-hint {
   position: absolute; inset: 0 0 46px 0; display: grid; place-content: center; text-align: center;
   color: var(--ink); pointer-events: none; font-size: 13px;

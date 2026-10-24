@@ -4,6 +4,7 @@
 //   eojeon demo [--port N]                      replay a scripted session, no claude needed
 //   eojeon init [DIR] [--pack yukjo|studio|all] copy subagent files into DIR/.claude/agents (never overwrites)
 //   eojeon watch [--off]                        also show Claude Code sessions running outside the court
+//   eojeon claude [claude args…]                run claude in this terminal, mirrored live into the court
 //   eojeon --help | --version
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,6 +21,9 @@ Usage
   eojeon demo [options]         Replay a scripted session (no claude, no usage)
   eojeon init [dir] [--pack P]  Add the Six Ministries (육조) subagents to dir/.claude/agents
                                 P = yukjo (default) | studio | all. Existing files are never overwritten.
+  eojeon claude [args…]         Run claude in THIS terminal, mirrored live into the running court:
+                                the web shows the same screen, and web input / 윤허 stamps reach it.
+                                Any claude flags pass through (e.g. eojeon claude --continue).
   eojeon watch [--off]          Also show Claude Code sessions you run elsewhere (any terminal or IDE),
                                 watch-only. Adds hooks to ~/.claude/settings.json (backup kept); --off removes them.
 
@@ -43,18 +47,26 @@ function takeOpt(list, name) {
   return v !== undefined && !v.startsWith('-') ? v : '';
 }
 
-if (argv.includes('-h') || argv.includes('--help') || argv[0] === 'help') {
+if (argv[0] !== 'claude' && (argv.includes('-h') || argv.includes('--help') || argv[0] === 'help')) {
   console.log(HELP);
   process.exit(0);
 }
-if (argv.includes('-v') || argv.includes('--version')) {
+if (argv[0] !== 'claude' && (argv.includes('-v') || argv.includes('--version'))) {
   console.log(pkg.version);
   process.exit(0);
 }
 
 const cmd = argv[0] && !argv[0].startsWith('-') ? argv.shift() : 'start';
 
-if (cmd === 'init') {
+if (cmd === 'claude') {
+  // everything after `claude` belongs to claude itself
+  const { run } = await import('../server/attach.js');
+  await run(process.argv.slice(process.argv.indexOf('claude') + 1));
+}
+
+if (cmd === 'claude') {
+  // handled above; keeps running until claude exits
+} else if (cmd === 'init') {
   const { install, PACKS } = await import('../server/agents.js');
   const pack = takeOpt(argv, '--pack') || 'yukjo';
   if (![...PACKS, 'all'].includes(pack)) {

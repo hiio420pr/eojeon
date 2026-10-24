@@ -47,11 +47,22 @@ let running = false;
 const send = (m) => ws && ws.readyState === 1 && ws.send(JSON.stringify(m));
 const sendInput = (d) => (DEMO ? null : send({ t: 'input', d }));
 
+// while another terminal is mirrored (eojeon claude), its size wins so the screen lines up
+let mirrorSize = null;
 function doFit() {
   try {
+    if (mirrorSize) {
+      term.resize(mirrorSize.cols, mirrorSize.rows);
+      return;
+    }
     fit.fit();
     send({ t: 'resize', cols: term.cols, rows: term.rows });
   } catch {}
+}
+function setMirror(size) {
+  mirrorSize = size || null;
+  $('term').classList.toggle('mirror', !!mirrorSize);
+  doFit();
 }
 new ResizeObserver(() => doFit()).observe($('term'));
 term.onData((d) => {
@@ -109,7 +120,9 @@ let lastAsk = 0;
 function logLine(ev) {
   const who = titleOf(ev.agentType);
   switch (ev.type) {
-    case 'PtyStart': return ['sys', '·', `claude 를 띄웠습니다 · ${ev.folder} (${{ new: '새 조회', continue: '이어서', resume: '세션 이어받기' }[ev.mode] || ev.mode})`];
+    case 'PtyStart':
+      if (ev.mode === 'mirror') return ['sys', '⇄', `다른 터미널의 claude 가 연결됐습니다 · ${ev.folder}`];
+      return ['sys', '·', `claude 를 띄웠습니다 · ${ev.folder} (${{ new: '새 조회', continue: '이어서', resume: '세션 이어받기' }[ev.mode] || ev.mode})`];
     case 'PtyExit': return ['sys', '·', `claude 가 끝났습니다 (code ${ev.code})`];
     case 'SessionStart':
       if (ev.source === 'clear') return ['sys', '·', '조정을 새로 엽니다 (/clear)'];
@@ -349,7 +362,8 @@ function connect() {
     switch (msg.t) {
       case 'hello':
         running = msg.running;
-        setStatus(running ? 'running' : 'idle', running ? `진행 중 · ${msg.info?.folder || ''}` : '대기');
+        setMirror(msg.size);
+        setStatus(running ? 'running' : 'idle', running ? `${msg.size ? '다른 터미널 연결' : '진행 중'} · ${msg.info?.folder || ''}` : '대기');
         hint.classList.toggle('hidden', running);
         logEl.innerHTML = '';
         for (const ev of msg.history || []) onEvent(ev, { replay: true });
@@ -361,11 +375,20 @@ function connect() {
       case 'started':
         running = true;
         hint.classList.add('hidden');
-        setStatus('running', `진행 중 · ${msg.info.folder}`);
+        if (msg.size) {
+          term.reset();
+          court.reset();
+        }
+        setMirror(msg.size);
+        setStatus('running', `${msg.size ? '다른 터미널 연결' : '진행 중'} · ${msg.info.folder}`);
+        break;
+      case 'size':
+        setMirror({ cols: msg.cols, rows: msg.rows });
         break;
       case 'exit':
         running = false;
-        setStatus('idle', `끝남 (code ${msg.code})`);
+        setMirror(null);
+        setStatus('idle', msg.mirror ? '다른 터미널 연결 끝남' : `끝남 (code ${msg.code})`);
         term.write('\r\n\x1b[2m[claude 가 끝났습니다. 위에서 다시 입궐할 수 있습니다]\x1b[0m\r\n');
         break;
       case 'event':

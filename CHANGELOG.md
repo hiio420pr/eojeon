@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.3.0] - 2026-10-25
+
+### Added
+- `eojeon claude [claude flags…]`: run claude in your own terminal and mirror it into the running court. The web terminal shows the same screen (following that terminal's size), and web input and 윤허/불허 stamps go into it. Hooks are attached the same way as for the court's own claude. Without a running court it runs plain claude.
+
+### Changed
+- `server/pty.js` shares the claude lookup, node-pty loading and child environment between the server and `eojeon claude`.
+
 ## [0.2.0] - 2026-10-24
 
 Fixes from the first day of use.
@@ -35,5 +43,6 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.3.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.1.0
