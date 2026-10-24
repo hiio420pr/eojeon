@@ -2,11 +2,16 @@
 // coordinates) for text, bubbles, the petition panel and stamps.
 // Everything here is hand-drawn rectangles — no traced photos, no real seals.
 
+import { lookupOfficial } from './court-types.js';
+
 export const W = 400;
 export const H = 224;
 
 const FPS = 8; // sprite frame rate (concept: 8fps, walk 4 frames, brush 2 frames)
 const WALK_SPEED = 64; // logical px per second
+const MAX_BUBBLES = 3; // more than this at once → only the newest show; the rest are in the 사관 일지
+// petition panel sits top-right over the back wall, clear of every desk and the throne
+export const PETITION_BOX = { x: 238, y: 4, w: 158 };
 
 const EMBLEMS = {
   scrolls: ['1111', '1001', '1111', '1001'],
@@ -22,6 +27,10 @@ const EMBLEMS = {
   drum: ['0110', '1111', '1111', '0110'],
   album: ['1110', '1010', '1110', '0000'],
   plain: ['0000', '0110', '0110', '0000'],
+  steps: ['0001', '0011', '0111', '1111'],
+  shield: ['1111', '1111', '1111', '0110'],
+  lens: ['0110', '1001', '0110', '0001'],
+  hammer: ['1111', '1111', '0100', '0100'],
 };
 
 // seat index -> position. Row-major, nearest the throne first; inner column first.
@@ -129,6 +138,7 @@ class Official {
     this.bubbleSub.style.display = sub ? '' : 'none';
     this.bubbleUntil = performance.now() + ms;
     this.bubbleSticky = sticky;
+    this.bubbleAt = performance.now();
   }
 
   hush() {
@@ -181,15 +191,15 @@ class Official {
     const by = Math.round(this.y);
     this.tag.style.display = show && this.state !== 'walking' ? '' : 'none';
     this.tag.style.transform = `translate(${bx}px, ${by + 2}px) translateX(-50%)`;
-    const bubbleOn = show && (this.bubbleSticky || now < this.bubbleUntil);
-    this.bubble.classList.toggle('on', bubbleOn);
-    if (bubbleOn) {
+    // position is decided by Court.layoutBubbles (overlap avoidance, max 3 at once)
+    this.bubbleOn = show && (this.bubbleSticky || now < this.bubbleUntil);
+    this.anchor = [bx, by - 34];
+    if (!this.bubbleOn) this.bubble.classList.remove('on');
+    if (this.bubbleOn) {
       if (this.state === 'working' && this.workUntil === Infinity) {
         this.bubbleSub.style.display = '';
         this.bubbleSub.textContent = `${this.court.ph.workingSuffix || '중이옵니다'} · ${elapsedText(now - this.workStart)}`;
       }
-      const left = Math.max(4, Math.min(W - 4, bx));
-      this.bubble.style.transform = `translate(${left}px, ${by - 34}px) translate(-50%, -100%)`;
       this.bubble.classList.toggle('blot', now < this.blotUntil);
     }
   }
@@ -248,8 +258,10 @@ class Official {
     r(14, 15, 4, 1, robeD);
     // sleeves (darker), hands
     const brushUp = working && frame % 2 === 0;
-    r(6, 18, 3, 8, robeD);
-    r(6, 26, 3, 2, P.skin);
+    // walk cycle (4 frames): arms swing opposite to the stepping foot
+    const swing = walking ? [0, -1, 0, 1][wf] : 0;
+    r(6, 18 + swing, 3, 8, robeD);
+    r(6, 26 + swing, 3, 2, P.skin);
     if (working) {
       // right arm works the brush over the desk / scroll
       r(21, 18, 4, 4, robeD);
@@ -257,8 +269,8 @@ class Official {
       r(24, brushUp ? 16 : 18, 1, 5, O); // brush
       r(24, brushUp ? 21 : 23, 1, 1, P.heuk);
     } else {
-      r(23, 18, 3, 8, robeD);
-      r(23, 26, 3, 2, P.skin);
+      r(23, 18 - swing, 3, 8, robeD);
+      r(23, 26 - swing, 3, 2, P.skin);
     }
     // hyungbae (chest square): job motif, border 2 lines for hong(당상관), 1 for others
     const border = (this.court.cfg.robes?.[this.robe]?.border) || 1;
@@ -314,6 +326,11 @@ export class Court {
     this.officials = new Map(); // id -> Official
     this.byAgent = new Map(); // agent_id -> official id
     this.guestUsed = new Set();
+    this.seatUsed = new Set(); // 'east:0' ...
+    this.fixedSeats = new Map(); // 'east:1' -> config key that owns that desk
+    for (const [k, d] of Object.entries(config.officials || {})) {
+      if (!k.startsWith('_') && d && d.side && Number.isInteger(d.seat)) this.fixedSeats.set(`${d.side}:${d.seat}`, k);
+    }
     this.walkQueue = [];
     this.petition = null;
     this.stats = { petitions: 0, ok: 0, no: 0, hold: 0 };
@@ -490,16 +507,24 @@ export class Court {
     const o = this.overlay;
     o.style.width = W + 'px';
     o.style.height = H + 'px';
-    // stone labels
+    // stone labels: fixed desks show their owner's letter; free desks get one when someone sits
     const all = this.cfg.officials || {};
-    for (const [key, d] of Object.entries(all)) {
-      if (key.startsWith('_')) continue;
-      const [x, y] = (SEATS[d.side] || SEATS.east)[d.seat || 0];
-      const stx = d.side === 'west' ? x - 30 : x + 22;
-      const s = el('div', 'stone-label', o, d.short || d.title[0]);
-      s.style.transform = `translate(${stx + 4}px, ${y - 12}px) translateX(-50%)`;
-      s.title = `${d.title} — ${d.role || ''}`;
+    this.stoneLabels = new Map();
+    for (const side of ['east', 'west']) {
+      SEATS[side].forEach(([x, y], i) => {
+        const k = `${side}:${i}`;
+        const stx = side === 'west' ? x - 30 : x + 22;
+        const s = el('div', 'stone-label', o, '');
+        s.style.transform = `translate(${stx + 4}px, ${y - 12}px) translateX(-50%)`;
+        const owner = all[this.fixedSeats.get(k)];
+        s.dataset.text = owner ? owner.short || owner.title[0] : '';
+        s.dataset.title = owner ? `${owner.title} — ${owner.role || ''}` : '';
+        s.textContent = s.dataset.text;
+        s.title = s.dataset.title;
+        this.stoneLabels.set(k, s);
+      });
     }
+    this.more = el('div', 'bubble-more', o);
     // decree scroll
     this.decree = el('div', 'decree', o);
     el('div', 'd-head', this.decree, '교지');
@@ -519,6 +544,7 @@ export class Court {
       b.addEventListener('click', () => this.petitionAction(k));
     }
     el('div', 'p-hint', this.pet, this.ph.permissionHint || '');
+    this.pet.title = this.ph.permissionHint || '';
     // stamp + plaque
     this.stamp = el('div', 'stamp', o);
     this.stampMark = el('div', 'st-mark', this.stamp);
@@ -532,6 +558,8 @@ export class Court {
     const def = this.cfg.officials.main;
     const m = new Official(this, { key: 'main', def, kind: 'main', id: 'main' });
     m.home = [...SEATS[def.side][def.seat]];
+    m.seat = `${def.side}:${def.seat}`;
+    this.seatUsed.add(m.seat);
     m.place(...m.home);
     m.visible = true;
     m.state = 'seated';
@@ -555,23 +583,54 @@ export class Court {
     return null;
   }
 
-  enterOfficial(agentType, agentId) {
-    const team = this.cfg.officials || {};
-    const guests = this.cfg.guests || {};
-    let def = team[agentType];
-    let kind = 'seat';
-    let id = agentType;
-    if (!def || agentType === 'main' || this.officials.has(agentType)) {
-      // unknown type, or that desk is already taken by a parallel agent of the same type
-      const base = def || guests[agentType] || guests['*'] || { title: '관리', robe: 'nok' };
-      def = { ...base, title: def ? `${base.title}(둘째)` : base.title || agentType };
-      if (!team[agentType] && !guests[agentType]) def.title = `${guests['*']?.title || '관리'} · ${agentType || '?'}`;
-      kind = 'guest';
-      id = `guest:${agentId || Math.random()}`;
+  // A desk for this official: its own fixed desk, else a free unowned desk (own side first),
+  // else a fixed desk whose owner is away. null → stands in the courtyard.
+  takeSeat(def) {
+    const sides = def.side === 'west' ? ['west', 'east'] : ['east', 'west'];
+    const free = (k) => !this.seatUsed.has(k);
+    let k = null;
+    if (def.side && Number.isInteger(def.seat) && free(`${def.side}:${def.seat}`)) k = `${def.side}:${def.seat}`;
+    for (const pass of [0, 1]) {
+      for (const side of sides) {
+        for (let i = 0; !k && i < SEATS[side].length; i++) {
+          const c = `${side}:${i}`;
+          if (free(c) && (pass === 1 || !this.fixedSeats.has(c))) k = c;
+        }
+      }
     }
-    const o = new Official(this, { key: agentType, def, kind, id });
-    if (kind === 'seat') {
-      o.home = [...SEATS[def.side][def.seat]];
+    if (!k) return null;
+    this.seatUsed.add(k);
+    const [side, i] = k.split(':');
+    const label = this.stoneLabels.get(k);
+    if (label) {
+      label.textContent = def.short || def.title[0];
+      label.title = `${def.title} — ${def.role || ''}`;
+    }
+    return { k, pos: SEATS[side][Number(i)] };
+  }
+
+  releaseSeat(k) {
+    if (!k) return;
+    this.seatUsed.delete(k);
+    const label = this.stoneLabels.get(k);
+    if (label) {
+      label.textContent = label.dataset.text;
+      label.title = label.dataset.title;
+    }
+  }
+
+  enterOfficial(agentType, agentId) {
+    const found = lookupOfficial(agentType, this.cfg);
+    let def = found.def;
+    const dup = found.kind === 'seat' && this.officials.has(found.key);
+    const seat = found.kind === 'seat' && !dup ? this.takeSeat(def) : null;
+    const kind = seat ? 'seat' : 'guest';
+    const id = seat ? found.key : `guest:${agentId || Math.random()}`;
+    if (dup) def = { ...def, title: `${def.title}(둘째)` }; // parallel agent of the same type
+    const o = new Official(this, { key: found.key, def, kind, id });
+    if (seat) {
+      o.home = [...seat.pos];
+      o.seat = seat.k;
     } else {
       const i = GUEST_SPOTS.findIndex((_, k) => !this.guestUsed.has(k));
       const k = i < 0 ? Math.floor(Math.random() * GUEST_SPOTS.length) : i;
@@ -583,7 +642,13 @@ export class Court {
     this.officials.set(id, o);
     if (agentId) this.byAgent.set(agentId, id);
     const route = kind === 'seat' ? [[200, DOOR[1] - 30], [200, o.home[1] + 6], [o.home[0], o.home[1] + 6], o.home] : [[200, DOOR[1] - 30], o.home];
-    this.queueWalk(o, route, () => o.say(fmt(this.ph.enter, { title: o.title }), o.role, 2600));
+    this.queueWalk(o, route, () => {
+      // it may have started a tool while still walking in: keep showing that work, not the greeting
+      if (o.workUntil === Infinity) {
+        o.state = 'working';
+        o.say(o.workText, '', 60_000, true);
+      } else o.say(fmt(this.ph.enter, { title: o.title }), o.role, 2600);
+    });
     return o;
   }
 
@@ -595,7 +660,7 @@ export class Court {
     const toMain = [[o.x, o.home[1] + 6], [200, o.home[1] + 6], [200, mainSpot[1]], mainSpot];
     this.queueWalk(o, toMain, () => {
       o.say(report ? fmt(this.ph.report, { report }) : this.ph.reportEmpty, '', 2600);
-      this.main.say('받았소', '', 1400);
+      if (!this.main.bubbleSticky) this.main.say('받았소', '', 1400); // never hide a petition or work bubble
       setTimeout(() => {
         o.carry = false;
         this.queueWalk(o, [[200, mainSpot[1]], [200, DOOR[1] - 20], DOOR], () => {
@@ -603,6 +668,7 @@ export class Court {
           o.remove();
           this.officials.delete(o.id);
           if (o.guestSpot != null) this.guestUsed.delete(o.guestSpot);
+          this.releaseSeat(o.seat);
         });
       }, this.reduced ? 1200 : 2200);
     });
@@ -828,6 +894,7 @@ export class Court {
       if (o.kind === 'seat' || o.kind === 'guest') {
         o.remove();
         this.officials.delete(o.id);
+        this.releaseSeat(o.seat);
       }
     }
     this.byAgent.clear();
@@ -869,9 +936,56 @@ export class Court {
     this.dusk += (this.duskTarget - this.dusk) * Math.min(1, dt * 1.5);
     if (this.dusk > 0.01) px(0, 0, W, H, `rgba(8,10,20,${(this.dusk * 0.45).toFixed(3)})`);
     for (const o of list) o.updateDom(now);
+    this.layoutBubbles();
     if (this.petition && !this.petition.closed) {
       this.petWait.textContent = fmt(this.ph.waiting, { elapsed: elapsedText(now - this.petition.since).replace('째', '') });
     }
+  }
+
+  // Speech bubbles: newest first (the petitioner always), at most MAX_BUBBLES.
+  // Each one tries a few spots around its speaker and takes the first that overlaps
+  // neither an earlier bubble nor the petition panel. Everything is also in the 사관 일지.
+  layoutBubbles() {
+    const on = [...this.officials.values()].filter((o) => o.bubbleOn);
+    const asker = this.petition && !this.petition.closed ? this.petition.actor : null;
+    on.sort((a, b) => (b === asker) - (a === asker) || (b.bubbleAt || 0) - (a.bubbleAt || 0));
+    const placed = [];
+    if (this.pet.classList.contains('on')) {
+      placed.push({ x: PETITION_BOX.x, y: PETITION_BOX.y, w: PETITION_BOX.w, h: this.pet.offsetHeight || 64 });
+    }
+    const hit = (r) => placed.some((p) => r.x < p.x + p.w + 2 && r.x + r.w + 2 > p.x && r.y < p.y + p.h + 2 && r.y + r.h + 2 > p.y);
+    let hidden = 0;
+    for (const o of on) {
+      if (placed.length - (this.pet.classList.contains('on') ? 1 : 0) >= MAX_BUBBLES) {
+        o.bubble.classList.remove('on');
+        hidden++;
+        continue;
+      }
+      o.bubble.classList.add('on');
+      const w = o.bubble.offsetWidth;
+      const h = o.bubble.offsetHeight;
+      const [ax, ay] = o.anchor;
+      const step = h + 3;
+      const side = Math.round(w * 0.55);
+      const tries = [[0, 0], [0, -step], [-side, 0], [side, 0], [-side, -step], [side, -step], [0, -2 * step], [0, step + 30]];
+      let best = null;
+      for (const [dx, dy] of tries) {
+        const x = Math.max(2, Math.min(W - 2 - w, ax + dx - w / 2));
+        const y = Math.max(2, Math.min(H - 2 - h, ay + dy - h));
+        const r = { x, y, w, h };
+        if (!best) best = r;
+        if (!hit(r)) {
+          best = r;
+          break;
+        }
+      }
+      placed.push(best);
+      // the tail only makes sense when the bubble sits right above its speaker
+      o.bubble.classList.toggle('loose', Math.abs(best.x + w / 2 - ax) > w / 2 - 4 || Math.abs(best.y + h - ay) > 2);
+      o.bubble.style.transform = `translate(${Math.round(best.x)}px, ${Math.round(best.y)}px)`;
+    }
+    this.more.textContent = hidden ? `말풍선 +${hidden} · 사관 일지에 있사옵니다` : '';
+    this.more.classList.toggle('on', hidden > 0);
   }
 
   // The king: a generic pixel monarch on the throne (no historical likeness).

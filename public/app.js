@@ -1,5 +1,6 @@
 import { Court, W, H } from './scene.js';
 import { runDemo } from './demo.js';
+import { titleOf as typeTitle } from './court-types.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -19,8 +20,11 @@ for (const [k, v] of Object.entries(config.palette || {})) if (!k.startsWith('_'
 for (const k of ['hong', 'cheong', 'nok', 'inju', 'paper']) if (config.pixel?.[k]) root.setProperty(`--px-${k}`, config.pixel[k]);
 
 // ---------- terminal ----------
+// D2Coding first: its Hangul is exactly 2 cells wide, so Korean text doesn't drift.
+// xterm measures the cell size once, so wait for the font before opening the terminal.
+await Promise.race([document.fonts.load('13px "D2Coding"', '가A').catch(() => {}), new Promise((r) => setTimeout(r, 2500))]);
 const term = new window.Terminal({
-  fontFamily: 'Menlo, Monaco, "D2Coding", "Apple SD Gothic Neo", "Noto Sans Mono CJK KR", monospace',
+  fontFamily: '"D2Coding", Menlo, Monaco, Consolas, "Noto Sans Mono CJK KR", monospace',
   fontSize: 13,
   lineHeight: 1.1,
   cursorBlink: true,
@@ -97,8 +101,7 @@ const court = new Court({
 const logEl = $('log');
 const ph = config.phrases || {};
 const officials = config.officials || {};
-const guests = config.guests || {};
-const titleOf = (t) => (!t ? officials.main.title : officials[t]?.title || guests[t]?.title || `${guests['*']?.title || '관리'}(${t})`);
+const titleOf = (t) => typeTitle(t, config);
 const fmt = (tpl, v) => String(tpl || '').replace(/\{(\w+)\}/g, (_, k) => (v[k] == null ? '' : v[k]));
 const byTool = new Map();
 let lastAsk = 0;
@@ -122,6 +125,7 @@ function logLine(ev) {
       if (ev.kind === 'idle_prompt') return ['sys', '…', ph.idle];
       return ['sys', '·', ev.message || ev.kind];
     case 'SubagentStart': return ['sub', '入', `${titleOf(ev.agentType)} 입궐 (${ev.agentType})`];
+    case 'Agents': return ['sys', '六', ev.text];
     case 'SubagentStop': return ['sub', '出', `${titleOf(ev.agentType)} 상소: ${ev.report || '맡은 일 마침'}`];
     case 'Stop': return ['stop', '完', ph.stop];
     case 'StopFailure': return ['fail', '×', '일을 마치지 못했사옵니다'];
@@ -223,13 +227,75 @@ cwdIn.addEventListener('input', () => {
 });
 loadSessions();
 
-$('launch').addEventListener('submit', (e) => {
+// ---------- permission mode ----------
+const pmodeSel = $('pmode');
+try { pmodeSel.value = localStorage.getItem('eojeon.pmode') || ''; } catch {}
+if (![...pmodeSel.options].some((o) => o.value === pmodeSel.value)) pmodeSel.value = '';
+pmodeSel.addEventListener('change', () => {
+  try { localStorage.setItem('eojeon.pmode', pmodeSel.value); } catch {}
+});
+
+// ---------- 육조 들이기 (offer the default subagents for this folder, once) ----------
+const YUKJO = ['ijo', 'hojo', 'yejo', 'byeongjo', 'hyeongjo', 'gongjo'];
+const askedKey = (cwd) => `eojeon.yukjo.never:${cwd}`;
+async function offerYukjo(cwd) {
+  let st;
+  try {
+    st = await fetch(`/api/agents?cwd=${encodeURIComponent(cwd)}`).then((r) => r.json());
+  } catch {
+    return;
+  }
+  if (!st || st.error || st.folderMissing || !st.missing?.length) return;
+  try { if (localStorage.getItem(askedKey(st.cwd))) return; } catch {}
+  const dlg = $('yukjoDlg');
+  $('yukjoWhere').textContent = st.dir;
+  $('yukjoMissing').textContent = `${st.missing.length}명`;
+  const list = $('yukjoList');
+  list.innerHTML = '';
+  for (const k of YUKJO) {
+    const li = document.createElement('li');
+    const d = officials[k] || {};
+    li.textContent = `${d.title || k} (${k}) — ${d.role || ''}`;
+    if (!st.missing.includes(k)) {
+      li.className = 'have';
+      li.title = '이미 있음 · 그대로 둡니다';
+    }
+    list.appendChild(li);
+  }
+  $('studioChk').checked = false;
+  const answer = await new Promise((resolve) => {
+    dlg.addEventListener('close', () => resolve(dlg.returnValue), { once: true });
+    dlg.showModal();
+  });
+  if (answer === 'never') {
+    try { localStorage.setItem(askedKey(st.cwd), '1'); } catch {}
+    return;
+  }
+  if (answer !== 'yes') return;
+  const pack = $('studioChk').checked ? 'all' : 'yukjo';
+  try {
+    const r = await fetch('/api/agents/install', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ cwd: st.cwd, pack }),
+    }).then((x) => x.json());
+    if (r.error) throw new Error(r.error);
+    const text = `육조를 들였사옵니다 · 새로 ${r.copied.length}명${r.skipped.length ? ` · 이미 있어 건너뜀 ${r.skipped.length}명(${r.skipped.join(', ')})` : ''}`;
+    addLog({ type: 'Agents', time: Date.now(), text });
+    court.showToast(text, 4200);
+  } catch (err) {
+    setStatus('error', `육조 들이기 실패: ${err.message}`);
+  }
+}
+
+$('launch').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (DEMO) return;
   const v = sessSel.value;
   const cwd = cwdIn.value.trim();
   if (running && !confirm('지금 조회를 끝내고 새로 시작할까요?')) return;
   try { localStorage.setItem('eojeon.cwd', cwd); } catch {}
+  await offerYukjo(cwd);
   let mode = 'new';
   let sessionId = '';
   if (v === 'continue') mode = 'continue';
@@ -240,7 +306,7 @@ $('launch').addEventListener('submit', (e) => {
   term.reset();
   court.reset();
   doFit();
-  send({ t: 'start', cwd, mode, sessionId });
+  send({ t: 'start', cwd, mode, sessionId, permissionMode: pmodeSel.value });
   term.focus();
 });
 $('stopBtn').addEventListener('click', () => {

@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import { WebSocketServer } from 'ws';
 import { listSessions } from './sessions.js';
 import { sanitize } from './sanitize.js';
+import { inspect as inspectAgents, install as installAgents, PACKS } from './agents.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,6 +32,7 @@ const NO_OPEN = flag('--no-open') || process.env.COURT_NO_OPEN === '1';
 const WANT_PORT = Number(opt('--port', process.env.COURT_PORT || 4747));
 const DEFAULT_CWD = path.resolve(expandHome(opt('--cwd', process.env.INIT_CWD || process.cwd())));
 const TOKEN = crypto.randomBytes(18).toString('hex');
+const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
 function expandHome(p) {
   return typeof p === 'string' && (p === '~' || p.startsWith('~/')) ? path.join(os.homedir(), p.slice(1)) : p;
@@ -106,13 +108,33 @@ function sysEvent(type, extra = {}) {
   pushEvent({ type, time: Date.now(), ...extra });
 }
 
+// node-pty ships prebuilt binaries for macOS (arm64/x64) and Windows (x64/arm64).
+// On Linux the prebuilt fork @homebridge/node-pty-prebuilt-multiarch is used instead.
+// Both are optionalDependencies so `npx eojeon` never fails to install (demo still works).
+const PTY_MODULES = ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
 let ptyMod = null;
 function loadPty() {
-  if (!ptyMod) ptyMod = require('node-pty');
-  return ptyMod;
+  if (ptyMod) return ptyMod;
+  const errors = [];
+  for (const name of PTY_MODULES) {
+    try {
+      ptyMod = require(name);
+      return ptyMod;
+    } catch (e) {
+      errors.push(`${name}: ${String(e.message).split('\n')[0]}`);
+    }
+  }
+  throw new Error(
+    '터미널 모듈(node-pty)을 불러오지 못했습니다. `npm i -g eojeon` 으로 다시 설치하거나 빌드 도구(python3, make, C++ 컴파일러)를 설치해 주세요. ' +
+      'Could not load node-pty. ' + errors.join(' | '),
+  );
 }
 
-function startClaude({ cwd, mode, sessionId, extraArgs }) {
+// `claude --help` → --permission-mode choices. bypassPermissions is left out on purpose:
+// with it no petition ever reaches the court, and it skips every safety prompt.
+export const PERMISSION_MODES = ['manual', 'acceptEdits', 'plan', 'auto', 'dontAsk'];
+
+function startClaude({ cwd, mode, sessionId, permissionMode }) {
   if (DEMO) throw new Error('데모 모드에서는 claude 를 띄우지 않습니다.');
   if (!CLAUDE) throw new Error('PATH 에서 claude 를 찾지 못했습니다. Claude Code 를 먼저 설치하세요.');
   const dir = path.resolve(expandHome(cwd || DEFAULT_CWD));
@@ -126,7 +148,10 @@ function startClaude({ cwd, mode, sessionId, extraArgs }) {
       args.push('--resume', sessionId);
     } else args.push('--resume'); // Claude Code's own picker
   }
-  if (Array.isArray(extraArgs)) for (const a of extraArgs) if (typeof a === 'string' && a) args.push(a);
+  if (permissionMode) {
+    if (!PERMISSION_MODES.includes(permissionMode)) throw new Error(`권한 모드가 이상합니다: ${permissionMode}`);
+    args.push('--permission-mode', permissionMode);
+  }
 
   const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor', FORCE_COLOR: '1' };
   // if this server itself was started from inside Claude Code, don't let the child think it's nested
@@ -140,7 +165,7 @@ function startClaude({ cwd, mode, sessionId, extraArgs }) {
 
   const { spawn } = loadPty();
   pty = spawn(CLAUDE, args, { name: 'xterm-256color', cols: size.cols, rows: size.rows, cwd: dir, env });
-  ptyInfo = { cwd: dir, folder: path.basename(dir), mode: mode || 'new', sessionId: sessionId || '', startedAt: Date.now(), pid: pty.pid };
+  ptyInfo = { cwd: dir, folder: path.basename(dir), mode: mode || 'new', sessionId: sessionId || '', permissionMode: permissionMode || '', startedAt: Date.now(), pid: pty.pid };
   outBuf = '';
   const me = pty;
   pty.onData((d) => {
@@ -171,17 +196,12 @@ function stopClaude() {
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.woff2': 'font/woff2',
-  '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png', '.ttf': 'font/ttf', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8',
 };
 const VENDOR = {
   '/vendor/xterm.js': () => require.resolve('@xterm/xterm/lib/xterm.js'),
   '/vendor/xterm.css': () => path.join(path.dirname(require.resolve('@xterm/xterm/package.json')), 'css', 'xterm.css'),
   '/vendor/addon-fit.js': () => require.resolve('@xterm/addon-fit/lib/addon-fit.js'),
-  '/fonts/Galmuri11.woff2': () => path.join(path.dirname(require.resolve('galmuri/package.json')), 'dist', 'Galmuri11.woff2'),
-  '/fonts/Galmuri11-Bold.woff2': () => path.join(path.dirname(require.resolve('galmuri/package.json')), 'dist', 'Galmuri11-Bold.woff2'),
-  '/fonts/Galmuri9.woff2': () => path.join(path.dirname(require.resolve('galmuri/package.json')), 'dist', 'Galmuri9.woff2'),
-  '/fonts/Galmuri7.woff2': () => path.join(path.dirname(require.resolve('galmuri/package.json')), 'dist', 'Galmuri7.woff2'),
-  '/fonts/GalmuriMono11.woff2': () => path.join(path.dirname(require.resolve('galmuri/package.json')), 'dist', 'GalmuriMono11.woff2'),
 };
 
 let PORT = WANT_PORT;
@@ -253,6 +273,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (p === '/api/agents/install' && req.method === 'POST') {
+    // writes files: only from our own page (same-origin fetch always sends Origin) and only JSON
+    if (!allowedOrigin(req.headers.origin || '') || !/^application\/json/.test(req.headers['content-type'] || '')) {
+      res.writeHead(403).end();
+      return;
+    }
+    try {
+      const { cwd, pack } = JSON.parse(await readBody(req, 4096));
+      if (!['yukjo', 'studio', 'all'].includes(pack || 'yukjo')) throw new Error(`pack: ${PACKS.join(' | ')} | all`);
+      const r = installAgents(path.resolve(expandHome(cwd || DEFAULT_CWD)), pack || 'yukjo');
+      return json(res, 200, r);
+    } catch (e) {
+      return json(res, 400, { error: e.message });
+    }
+  }
+
   if (req.method !== 'GET') {
     res.writeHead(405).end();
     return;
@@ -260,8 +296,9 @@ const server = http.createServer(async (req, res) => {
 
   if (p === '/api/info') {
     return json(res, 200, {
+      app: 'eojeon', version: VERSION,
       demo: DEMO, defaultCwd: DEFAULT_CWD, claudeFound: !!CLAUDE, running: !!pty, info: ptyInfo,
-      home: os.homedir(), platform: process.platform,
+      home: os.homedir(), platform: process.platform, permissionModes: PERMISSION_MODES,
     });
   }
   if (p === '/api/config') {
@@ -269,6 +306,15 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, loadConfig());
     } catch (e) {
       return json(res, 500, { error: 'court.config.json 을 읽지 못했습니다: ' + e.message });
+    }
+  }
+  if (p === '/api/agents') {
+    const cwd = path.resolve(expandHome(url.searchParams.get('cwd') || DEFAULT_CWD));
+    if (!fs.existsSync(cwd)) return json(res, 200, { cwd, folderMissing: true });
+    try {
+      return json(res, 200, { cwd, ...inspectAgents(cwd, 'yukjo'), studio: inspectAgents(cwd, 'studio').missing.length === 0 });
+    } catch (e) {
+      return json(res, 500, { error: e.message });
     }
   }
   if (p === '/api/sessions') {
@@ -368,7 +414,7 @@ function openBrowser(url) {
 PORT = await listen(WANT_PORT);
 writeSettings(PORT);
 const url = `http://localhost:${PORT}/${DEMO ? '?demo=1' : ''}`;
-console.log(`\n  어전 · eojeon ${DEMO ? '(demo)' : ''}`);
+console.log(`\n  어전 · eojeon ${VERSION} ${DEMO ? '(demo)' : ''}`);
 console.log(`  ${url}`);
 console.log(`  claude: ${CLAUDE || '(not found)'}   folder: ${DEFAULT_CWD}`);
 console.log('  Everything stays on this machine (127.0.0.1). Ctrl+C to quit.\n');

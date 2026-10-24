@@ -25,6 +25,17 @@
         <span>조회</span>
         <select id="session"></select>
       </label>
+      <label class="field pmode">
+        <span>권한 모드</span>
+        <select id="pmode" title="claude --permission-mode">
+          <option value="">기본 (내 설정대로)</option>
+          <option value="manual">manual · 매번 묻기</option>
+          <option value="acceptEdits">acceptEdits · 파일 수정은 자동 허용</option>
+          <option value="plan">plan · 계획만 (수정 안 함)</option>
+          <option value="auto">auto · 안전한 것은 자동 판단</option>
+          <option value="dontAsk">dontAsk · 허용 목록 밖은 거절</option>
+        </select>
+      </label>
       <button type="submit" id="startBtn" class="btn primary">입궐 (시작)</button>
       <button type="button" id="stopBtn" class="btn">퇴청 (종료)</button>
       <span id="status" class="status" data-state="idle">대기</span>
@@ -58,9 +69,25 @@
     </aside>
   </main>
 
+  <dialog id="yukjoDlg" class="dlg">
+    <form method="dialog">
+      <h2>육조를 들이시겠사옵니까?</h2>
+      <p class="muted" id="yukjoWhere"></p>
+      <p>이 폴더의 <code>.claude/agents/</code> 에 기본 신하 육조 중 <b id="yukjoMissing">여섯</b>이 아직 없습니다. 들이면 Claude Code 가 일을 나눠 맡깁니다.</p>
+      <ul class="yukjo-list" id="yukjoList"></ul>
+      <label class="chk"><input type="checkbox" id="studioChk" /> 선택 팩 <b>studio</b>(기획·디자인·홍보 11명)도 함께</label>
+      <p class="muted small">같은 이름 파일이 이미 있으면 덮어쓰지 않고 건너뜁니다. 나중에 <code>npx eojeon init</code> 으로도 할 수 있습니다.</p>
+      <div class="dlg-btns">
+        <button value="no" class="btn">그냥 입궐</button>
+        <button value="never" class="btn">이 폴더는 묻지 않기</button>
+        <button value="yes" class="btn primary" autofocus>예, 들이라</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="foot">
     <span>모든 것이 이 컴퓨터 안에서만 돕니다 (127.0.0.1). 외부로 보내는 것 없음.</span>
-    <span>Claude Code 비공식 도구 · MIT · 픽셀 글꼴 Galmuri (SIL OFL 1.1)</span>
+    <span>Claude Code 비공식 도구 · MIT · 글꼴 Galmuri · D2Coding (SIL OFL 1.1)</span>
   </footer>
 
   <script src="/vendor/xterm.js"></script>

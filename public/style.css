@@ -2,6 +2,8 @@
 @font-face { font-family: 'Galmuri11'; font-weight: 700; src: url('/fonts/Galmuri11-Bold.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Galmuri9'; src: url('/fonts/Galmuri9.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Galmuri7'; src: url('/fonts/Galmuri7.woff2') format('woff2'); font-display: swap; }
+/* Terminal: Hangul glyphs are exactly two Latin cells wide, so Korean lines up in xterm. Bundled, no CDN. */
+@font-face { font-family: 'D2Coding'; src: local('D2Coding'), url('/fonts/D2Coding-Ver1.4.0-20261003.ttf') format('truetype'); font-display: block; }
 
 /* Palette: concept.md 4-1 (dark). Overridden at runtime from court.config.json. */
 :root {
@@ -70,6 +72,18 @@ code { font-family: ui-monospace, Menlo, monospace; color: var(--hwang); }
 }
 .field.folder input { width: 300px; max-width: 70vw; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
 .field.session select { width: 300px; max-width: 70vw; }
+.field.pmode select { width: 170px; }
+
+/* ---------- 육조 dialog ---------- */
+.dlg { background: var(--card); color: var(--ink); border: 1px solid var(--hwang); border-radius: 6px; max-width: 460px; padding: 16px 18px; }
+.dlg::backdrop { background: rgba(0,0,0,0.55); }
+.dlg h2 { font-family: var(--pixel); font-size: 16px; margin: 0 0 6px; color: var(--hwang); }
+.dlg p { margin: 6px 0; line-height: 1.5; }
+.dlg .small { font-size: 12px; }
+.yukjo-list { margin: 8px 0; padding-left: 18px; line-height: 1.6; }
+.yukjo-list .have { color: var(--ink2); text-decoration: line-through; }
+.chk { display: flex; gap: 6px; align-items: center; margin: 8px 0; }
+.dlg-btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
 .btn {
   background: var(--heuk); border: 1px solid var(--line); border-radius: 4px;
   padding: 7px 12px; cursor: pointer; font-family: var(--pixel); font-size: 12px;
@@ -107,7 +121,7 @@ body { height: 100vh; }
   .stage-wrap { aspect-ratio: 400 / 224; }
   .log-wrap { border-left: 0; border-top: 1px solid var(--line); }
   .top { padding: 10px 16px; }
-  .field.folder input, .field.session select { width: 100%; max-width: none; }
+  .field.folder input, .field.session select, .field.pmode select { width: 100%; max-width: none; }
   .launch { width: 100%; }
   .field.folder, .field.session { flex: 1 1 100%; }
 }
@@ -150,6 +164,13 @@ body { height: 100vh; }
   background: var(--px-paper); outline: 1px solid #1E1B17; transform: translateX(-50%);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
+.bubble.loose::after { display: none; }
+.bubble-more {
+  display: none; left: 4px !important; top: 210px !important; z-index: 5; white-space: nowrap;
+  font-family: 'Galmuri7', var(--pixel); font-size: 8px; line-height: 9px;
+  color: var(--ink2); background: rgba(21,23,28,0.85); padding: 1px 3px; outline: 1px solid var(--line);
+}
+.bubble-more.on { display: block; }
 .bubble .b-main { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bubble .b-sub { font-family: 'Galmuri7', var(--pixel); font-size: 8px; line-height: 9px; color: #6B6358; margin-top: 1px; white-space: nowrap; }
 .bubble.blot { background: #E8DFCE; }
@@ -178,8 +199,9 @@ body { height: 100vh; }
 
 /* petition (permission request) */
 .petition {
-  left: 200px !important; top: 82px !important;
-  width: 214px; transform: translateX(-50%);
+  /* top-right over the back wall: never covers a desk, the throne or the king (scene.js PETITION_BOX) */
+  left: 238px !important; top: 4px !important;
+  width: 158px;
   background: var(--card); color: var(--ink);
   outline: 1px solid #1E1B17;
   border: 1px solid var(--hwang);
@@ -201,13 +223,13 @@ body { height: 100vh; }
 .petition .p-ok { background: var(--px-hong); color: #fff; }
 .petition .p-no { background: #3A3F4A; }
 .petition .p-btn:focus-visible { outline: 2px solid var(--hwang); }
-.petition .p-hint { font-family: 'Galmuri7', var(--pixel); font-size: 8px; line-height: 9px; color: var(--ink2); margin-top: 3px; white-space: normal; }
-.petition.min { width: 120px; }
+.petition .p-hint { display: none; } /* shown as a tooltip on the panel instead, to keep it short */
+.petition.min { width: 110px; left: 286px !important; }
 .petition.min .p-btns, .petition.min .p-hint, .petition.min .p-ask { display: none; }
 
 /* stamps: shape + mark + word (never color alone) */
 .stamp {
-  left: 200px !important; top: 104px !important;
+  left: 317px !important; top: 30px !important;
   width: 34px; height: 34px; transform: translate(-50%, -50%) rotate(-12deg);
   display: none; z-index: 8;
   color: var(--px-inju);
@@ -223,7 +245,7 @@ body { height: 100vh; }
 .stamp .st-mark { font-size: 10px; line-height: 12px; margin-top: 3px; }
 .stamp .st-label { font-size: 10px; line-height: 11px; font-weight: 700; }
 .stamp-full {
-  left: 200px !important; top: 126px !important; transform: translateX(-50%);
+  left: 317px !important; top: 52px !important; transform: translateX(-50%);
   display: none; z-index: 8; white-space: nowrap;
   font-family: 'Galmuri11', var(--pixel); font-weight: 700; font-size: 11px;
   color: #fff; background: var(--px-inju); padding: 1px 4px; outline: 1px solid #1E1B17;
