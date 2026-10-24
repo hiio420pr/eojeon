@@ -1,0 +1,15 @@
+{
+  "name": "eojeon",
+  "description": "어전 · eojeon — Claude Code as a royal court. Unofficial; not affiliated with Anthropic.",
+  "owner": {
+    "name": "hiio420pr",
+    "url": "https://github.com/hiio420pr"
+  },
+  "plugins": [
+    {
+      "name": "eojeon",
+      "source": "./",
+      "description": "/eojeon opens the court in your browser; adds the Six Ministries (육조) subagents as eojeon:ijo … eojeon:gongjo."
+    }
+  ]
+}
