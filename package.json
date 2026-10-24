@@ -26,10 +26,10 @@
   "type": "module",
   "main": "server/index.js",
   "bin": {
-    "eojeon": "bin/eojeon.js"
+    "eojeon": "cli/eojeon.js"
   },
   "files": [
-    "bin/",
+    "cli/",
     "server/",
     "public/",
     "templates/",
@@ -38,10 +38,10 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "start": "node bin/eojeon.js",
-    "demo": "node bin/eojeon.js demo",
+    "start": "node cli/eojeon.js",
+    "demo": "node cli/eojeon.js demo",
     "test": "node --test",
-    "check": "node --check bin/eojeon.js && node --check server/index.js && node --check server/hook.js && node --check server/sessions.js && node --check server/sanitize.js && node --check server/agents.js",
+    "check": "node --check cli/eojeon.js && node --check server/index.js && node --check server/hook.js && node --check server/sessions.js && node --check server/sanitize.js && node --check server/agents.js",
     "check-publish": "node scripts/check-publish.js",
     "prepublishOnly": "npm test && node scripts/check-publish.js",
     "postinstall": "node scripts/fix-pty.js",

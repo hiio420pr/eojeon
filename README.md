@@ -42,7 +42,7 @@ Claude Code 안에서:
 git clone https://github.com/hiio420pr/eojeon.git
 cd eojeon
 npm install
-npm start          # = node bin/eojeon.js
+npm start          # = node cli/eojeon.js
 ```
 
 ### 명령

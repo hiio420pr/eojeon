@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-const BIN = new URL('../bin/eojeon.js', import.meta.url).pathname;
+const BIN = new URL('../cli/eojeon.js', import.meta.url).pathname;
 const run = (...args) => spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf8', timeout: 10000 });
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
