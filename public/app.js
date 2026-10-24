@@ -317,6 +317,17 @@ function renderPending(items) {
   }
 }
 let pendingItems = [];
+// the demo has no server, so it keeps a tiny 상소함 of its own
+function demoPending(ev) {
+  const before = pendingItems.length;
+  if (ev.type === 'SessionStart') pendingItems = [];
+  if (ev.type === 'PermissionRequest') pendingItems.push({ id: `p${ev.time}`, kind: 'perm', tool: ev.tool, text: ev.summary || '', agentType: ev.agentType, folder: ev.folder, time: ev.time });
+  if (/^Post/.test(ev.type)) pendingItems = pendingItems.filter((x) => !(x.kind === 'perm' && x.tool === ev.tool));
+  if (ev.type === 'Stop' && /[?？]\s*$/.test(ev.answer || '')) {
+    pendingItems.push({ id: `a${ev.time}`, kind: 'ask', text: ev.answer.trim().split('\n').pop(), agentType: ev.agentType, folder: ev.folder, time: ev.time });
+  }
+  if (pendingItems.length !== before || ev.type === 'SessionStart') renderPending(pendingItems);
+}
 function showTerm(on) {
   layoutEl.classList.toggle('show-term', on);
   requestAnimationFrame(() => {
@@ -331,6 +342,7 @@ function onEvent(ev, opts = {}) {
   chatEvent(ev, !!opts.replay);
   court.handle(ev, opts);
   if (!opts.replay && /^Permission|^Post|^Notification$|^UserPromptSubmit$/.test(ev.type)) renderPending(pendingItems);
+  if (DEMO) demoPending(ev);
   if (ev.ext && !running && !DEMO) {
     $('termHintMain').innerHTML = `바깥 터미널의 Claude Code 를 보는 중입니다 (<b>${escapeHtml(ev.folder || '')}</b>) — 보기 전용`;
   }

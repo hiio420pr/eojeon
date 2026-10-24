@@ -1,6 +1,6 @@
 # 어전 · eojeon
 
-<p align="center"><img src="docs/hero.gif" width="900" alt="어전 데모: 임금이 교지를 내리면 신하들이 입궐해 일하고, 윤허를 청하자 윤허하노라 도장이 찍힌다. 아래는 Claude Code 터미널(데모 재생, 실제 claude 실행 없음). (Demo: a decree is issued, subagent officials work, a permission request is approved with a royal seal.)"></p>
+<p align="center"><img src="docs/hero.gif" width="900" alt="어전 데모: 왼쪽 큰 궁궐에서 교지를 받은 영의정이 신하들을 불러 일을 나누고, 윤허를 청하는 패널과 도장이 뜨며, 오른쪽 답변 탭에 교지와 상소(최종 답변)만 쌓이고, 아직 답하지 않은 질문은 상소 더미로 남는다(데모 재생, 실제 claude 실행 없음). (Demo: the court fills the left side; the right panel shows only your decrees and Claude's answers, and unanswered requests pile up.)"></p>
 
 **Claude Code를 어전회의로. 교지를 내리면 AI 신하들이 일하고, 윤허를 청한다.**
 
@@ -9,9 +9,13 @@
 
 > Claude Code 비공식 도구입니다. Anthropic 과 관계가 없습니다. *Unofficial — not affiliated with Anthropic.*
 
-![신하들이 일하는 장면](docs/screenshot-working.png)
+| 신하들이 일하는 장면 · 사관 일지 | 윤허를 청하는 장면 · 상소함 |
+|---|---|
+| ![신하들이 일하는 장면과 사관 일지](docs/screenshot-working.png) | ![윤허를 청하는 패널과 상소함](docs/screenshot-permission.png) |
+| **답변** — 교지와 최종 답변만 | **상소함** — 아직 답하지 않은 질문 |
+| ![답변 탭: 교지와 상소(최종 답변)](docs/screenshot-answer.png) | ![상소함 탭과 궁궐의 상소 더미](docs/screenshot-pending.png) |
 
-![윤허를 청하는 장면](docs/screenshot-permission.png)
+<sub>모두 데모 화면입니다(`npx eojeon-cli demo`, 실제 claude 실행 없음). 영상: [docs/hero.mp4](docs/hero.mp4)</sub>
 
 [English below](#english)
 
