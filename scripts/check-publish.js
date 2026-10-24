@@ -10,7 +10,9 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const out = execFileSync(npm, ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: ROOT, encoding: 'utf8', shell: process.platform === 'win32' });
-const [info] = JSON.parse(out);
+// npm ≤10 prints [ {…} ], npm 11+ prints { "<name>": {…} }
+const parsed = JSON.parse(out);
+const info = Array.isArray(parsed) ? parsed[0] : Object.values(parsed)[0];
 const files = info.files.map((f) => f.path).sort();
 
 // Every shipped file must be under one of these (README/LICENSE/package.json are added by npm itself).
