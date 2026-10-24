@@ -17,6 +17,7 @@ import { sanitize } from './sanitize.js';
 import { inspect as inspectAgents, install as installAgents, PACKS } from './agents.js';
 import { HOOK_EVENTS, eojeonDir, runtimeFile } from './watch.js';
 import { findClaude, loadPty, childEnv } from './pty.js';
+import { Pending } from './pending.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -113,10 +114,12 @@ function broadcast(msg) {
   for (const ws of clients) if (ws.readyState === 1) ws.send(s);
 }
 
+const pending = new Pending(path.join(eojeonDir(), DEMO ? 'pending-demo.json' : 'pending.json'));
 function pushEvent(ev) {
   events.push(ev);
   if (events.length > EV_MAX) events.splice(0, events.length - EV_MAX);
   broadcast({ t: 'event', ev });
+  if (pending.apply(ev)) broadcast({ t: 'pending', items: pending.items });
 }
 
 function sysEvent(type, extra = {}) {
@@ -404,7 +407,7 @@ wss.on('connection', (ws, req) => {
   clients.add(ws);
   ws.send(JSON.stringify({
     t: 'hello', demo: DEMO, running: isRunning(), info: ptyInfo, history: events.slice(-200),
-    size: mirror ? { cols: mirror.cols, rows: mirror.rows } : null,
+    size: mirror ? { cols: mirror.cols, rows: mirror.rows } : null, pending: pending.items,
   }));
   if (isRunning() && outBuf) ws.send(JSON.stringify({ t: 'out', d: outBuf, replay: true }));
   ws.on('message', (raw) => {
@@ -457,6 +460,9 @@ wss.on('connection', (ws, req) => {
         } catch (e) {
           ws.send(JSON.stringify({ t: 'error', message: e.message }));
         }
+        break;
+      case 'dismiss':
+        if (typeof m.id === 'string' && pending.dismiss(m.id)) broadcast({ t: 'pending', items: pending.items });
         break;
       case 'stop':
         if (mirror) ws.send(JSON.stringify({ t: 'error', message: '연결된 터미널의 claude 는 그 터미널에서 끝내세요 (/exit).' }));

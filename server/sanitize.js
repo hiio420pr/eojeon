@@ -87,6 +87,8 @@ export function toolSummary(tool, input, cwd) {
       return clip([i.subagent_type, i.description].filter(Boolean).join(' · '), 56);
     case 'TodoWrite':
       return Array.isArray(i.todos) ? `할 일 ${i.todos.length}개` : '';
+    case 'AskUserQuestion':
+      return clip(redact(String((Array.isArray(i.questions) && i.questions[0]?.question) || '')), 120);
     case 'Skill':
       return clip(String(i.skill || i.command || ''), 40);
     default:

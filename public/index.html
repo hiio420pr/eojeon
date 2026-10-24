@@ -47,6 +47,7 @@
       <div class="stage" id="stage">
         <canvas id="scene" aria-hidden="true"></canvas>
         <div id="overlay" class="overlay"></div>
+        <button type="button" id="pile" class="pile hidden" title="아직 답하지 않은 상소 — 상소함 열기"><span class="pile-scrolls" aria-hidden="true"></span><span id="pileCount">0</span></button>
       </div>
     </section>
 
@@ -63,6 +64,7 @@
     <aside class="log-wrap" aria-label="답변과 사관 일지">
       <div class="side-tabs" role="tablist">
         <button type="button" id="tabChat" class="side-tab on" role="tab">답변</button>
+        <button type="button" id="tabPend" class="side-tab" role="tab">상소함 <span id="pendCount" class="badge hidden">0</span></button>
         <button type="button" id="tabLog" class="side-tab" role="tab">사관 일지</button>
         <button type="button" id="termToggle" class="side-tab term-btn" title="Claude Code 터미널 화면 열기/닫기">터미널</button>
       </div>
@@ -73,6 +75,7 @@
           원래 CLI 화면은 위 <b>터미널</b> 버튼으로 엽니다.
         </li>
       </ol>
+      <ol id="pend" class="pend hidden"></ol>
       <ol id="log" class="log hidden"></ol>
       <form id="chatForm" class="chat-form" autocomplete="off">
         <textarea id="chatInput" rows="2" placeholder="교지를 쓰고 Enter (줄바꿈 Shift+Enter)"></textarea>

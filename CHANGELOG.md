@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.5.0] - 2026-10-25
+
+### Added
+- 상소함: permission requests not answered yet and questions Claude stopped on (AskUserQuestion, or an answer ending with a question) pile up in a 상소함 tab and as a pile with a count on the court. They leave on their own when answered or when you send the next decree, or with 치우기. Kept in `~/.eojeon/pending.json` across restarts. Stamp buttons appear only on the request the terminal is showing now.
+
 ## [0.4.0] - 2026-10-25
 
 ### Changed
@@ -63,6 +68,7 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.5.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.5.0
 [0.4.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.4.0
 [0.3.2]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.2
 [0.3.1]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.1

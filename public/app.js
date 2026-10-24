@@ -251,16 +251,72 @@ function chatEvent(ev, replay) {
 const layoutEl = document.querySelector('.layout');
 function showTab(which) {
   $('tabChat').classList.toggle('on', which === 'chat');
+  $('tabPend').classList.toggle('on', which === 'pend');
   $('tabLog').classList.toggle('on', which === 'log');
   chatEl.classList.toggle('hidden', which !== 'chat');
+  $('pend').classList.toggle('hidden', which !== 'pend');
   logEl.classList.toggle('hidden', which !== 'log');
   try { localStorage.setItem('eojeon.tab', which); } catch {}
 }
 $('tabChat').addEventListener('click', () => showTab('chat'));
 $('tabLog').addEventListener('click', () => showTab('log'));
+$('tabPend').addEventListener('click', () => showTab('pend'));
+$('pile').addEventListener('click', () => showTab('pend'));
 let savedTab = 'chat';
 try { savedTab = localStorage.getItem('eojeon.tab') || 'chat'; } catch {}
-showTab(savedTab === 'log' ? 'log' : 'chat');
+showTab(['log', 'pend'].includes(savedTab) ? savedTab : 'chat');
+
+// ---------- 상소함 (requests still waiting for the king) ----------
+function renderPending(items) {
+  const list = $('pend');
+  list.innerHTML = '';
+  const n = items.length;
+  $('pendCount').textContent = String(n);
+  $('pendCount').classList.toggle('hidden', !n);
+  $('pileCount').textContent = String(n);
+  $('pile').classList.toggle('hidden', !n);
+  if (!n) {
+    const li = document.createElement('li');
+    li.className = 'none';
+    li.textContent = '쌓인 상소가 없사옵니다. 윤허 요청과 Claude 의 질문 중 아직 답하지 않은 것이 여기에 모입니다.';
+    list.appendChild(li);
+    return;
+  }
+  // stamps only for the petition open on the court right now (that is the prompt the terminal is showing)
+  const open = court.petition && !court.petition.closed && !court.petition.ext ? court.petition : null;
+  const live = open ? [...items].reverse().find((x) => x.kind === 'perm' && !x.ext && (!x.tool || x.tool === open.tool)) : null;
+  for (const it of [...items].reverse()) {
+    const li = document.createElement('li');
+    li.className = `k-${it.kind}`;
+    const meta = document.createElement('span');
+    meta.className = 'meta';
+    const d = new Date(it.time);
+    meta.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${titleOf(it.agentType)} · ${it.kind === 'perm' ? '윤허를 청함' : '하문을 기다림'}${it.folder ? ' · ' + it.folder : ''}${it.ext ? ' · 바깥 터미널' : ''}`;
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    txt.textContent = it.kind === 'perm' ? `${it.tool}${it.tool && it.text ? ': ' : ''}${it.text}` : it.text;
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    const btn = (label, cls, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn ${cls}`;
+      b.textContent = label;
+      b.addEventListener('click', fn);
+      acts.appendChild(b);
+    };
+    if (it === live && running) {
+      const keys = config.permissionKeys || {};
+      btn(config.stamps?.ok?.label || '윤허', 'primary', () => { sendInput(keys.ok); addLog({ type: 'Verdict', time: Date.now(), verdict: 'ok' }); court.closePetition('ok'); });
+      btn(config.stamps?.no?.label || '불허', '', () => { sendInput(keys.no); addLog({ type: 'Verdict', time: Date.now(), verdict: 'no' }); court.closePetition('no'); });
+    }
+    if (it.kind === 'ask' && !it.ext) btn('답하기', 'primary', () => { showTab('chat'); chatIn.focus(); });
+    btn('치우기', '', () => send({ t: 'dismiss', id: it.id }));
+    li.append(meta, txt, acts);
+    list.appendChild(li);
+  }
+}
+let pendingItems = [];
 function showTerm(on) {
   layoutEl.classList.toggle('show-term', on);
   requestAnimationFrame(() => {
@@ -274,6 +330,7 @@ function onEvent(ev, opts = {}) {
   addLog(ev);
   chatEvent(ev, !!opts.replay);
   court.handle(ev, opts);
+  if (!opts.replay && /^Permission|^Post|^Notification$|^UserPromptSubmit$/.test(ev.type)) renderPending(pendingItems);
   if (ev.ext && !running && !DEMO) {
     $('termHintMain').innerHTML = `바깥 터미널의 Claude Code 를 보는 중입니다 (<b>${escapeHtml(ev.folder || '')}</b>) — 보기 전용`;
   }
@@ -458,6 +515,12 @@ function connect() {
         hint.classList.toggle('hidden', running);
         logEl.innerHTML = '';
         for (const ev of msg.history || []) onEvent(ev, { replay: true });
+        pendingItems = msg.pending || [];
+        renderPending(pendingItems);
+        break;
+      case 'pending':
+        pendingItems = msg.items || [];
+        renderPending(pendingItems);
         break;
       case 'out':
         hint.classList.add('hidden');

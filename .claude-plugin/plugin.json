@@ -1,7 +1,7 @@
 {
   "name": "eojeon",
   "displayName": "어전 · eojeon",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Open Claude Code as a pixel-art Joseon royal court in your browser (/eojeon), plus the Six Ministries (육조) subagents: planner, performance, docs, security, review, implementation. Unofficial.",
   "author": {
     "name": "hiio420pr",
