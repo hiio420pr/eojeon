@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.3.2] - 2026-10-25
+
+### Fixed
+- Mirrored terminal (`eojeon claude`) no longer gets cut off: the web terminal shrinks its font until the whole screen fits, and the terminal pane gets more height while mirroring.
+- Hooks keep reaching the court after it restarts: if the court that started claude is gone, the hook posts to the one now running (`~/.eojeon/runtime.json`).
+
 ## [0.3.1] - 2026-10-25
 
 ### Fixed
@@ -48,6 +54,7 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.3.2]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.2
 [0.3.1]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.1
 [0.3.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.0
 [0.2.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.2.0

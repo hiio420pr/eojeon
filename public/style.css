@@ -106,6 +106,8 @@ code { font-family: ui-monospace, Menlo, monospace; color: var(--hwang); }
   grid-template-rows: minmax(240px, 56%) minmax(220px, 1fr);
   grid-template-areas: 'stage log' 'term log';
 }
+/* another terminal is mirrored (eojeon claude): its screen is usually big, so give it most of the height */
+.layout.mirroring { grid-template-rows: minmax(150px, 32%) minmax(260px, 1fr); }
 .stage-wrap { grid-area: stage; position: relative; overflow: hidden; background: #0F1115; display: grid; place-items: center; }
 .term-wrap { grid-area: term; position: relative; display: flex; flex-direction: column; border-top: 1px solid var(--line); min-height: 0; }
 .log-wrap { grid-area: log; border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--card); }
@@ -285,7 +287,7 @@ body { height: 100vh; }
 /* ---------- terminal ---------- */
 .term { flex: 1; min-height: 0; padding: 6px 0 0 8px; background: var(--paper); }
 .term .xterm { height: 100%; }
-.term.mirror { overflow: auto; }
+.term.mirror { overflow: hidden; }
 .term.mirror .xterm { height: auto; }
 .term-hint {
   position: absolute; inset: 0 0 46px 0; display: grid; place-content: center; text-align: center;

@@ -20,17 +20,17 @@ const WATCH = process.argv[2] === '--watch';
 // the court's own claude already reports through its --settings hook; don't count it twice
 if (WATCH && process.env.EOJEON_CHILD === '1') done();
 
-let port;
-let token;
-if (WATCH) {
-  try {
-    ({ port, token } = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.eojeon', 'runtime.json'), 'utf8')));
-  } catch {
-    done(); // no court running
-  }
-} else {
-  [port, token] = process.argv.slice(2);
+// where to post: the court that started this claude, then (if it has restarted since) the one running now
+const targets = [];
+if (!WATCH) {
+  const [p, t] = process.argv.slice(2);
+  if (p && t) targets.push({ port: p, token: t });
 }
+try {
+  const rt = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.eojeon', 'runtime.json'), 'utf8'));
+  if (rt.port && rt.token && !targets.some((x) => String(x.port) === String(rt.port) && x.token === rt.token)) targets.push(rt);
+} catch {}
+if (!targets.length) done(); // no court running
 
 let buf = '';
 process.stdin.setEncoding('utf8');
@@ -45,24 +45,28 @@ process.stdin.on('end', () => {
   } catch {
     return done();
   }
-  if (!port || !token) return done();
   if (WATCH) ev.ext = true; // a session outside the court: watch only, the stamps can't answer it
   const body = JSON.stringify(ev);
-  const req = http.request(
-    {
-      host: '127.0.0.1',
-      port: Number(port),
-      path: '/hook',
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), 'x-court-token': String(token) },
-      timeout: 800,
-    },
-    (res) => {
-      res.resume();
-      res.on('end', done);
-    },
-  );
-  req.on('timeout', () => req.destroy());
-  req.on('error', done);
-  req.end(body);
+  const post = (i) => {
+    const target = targets[i];
+    if (!target) return done();
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port: Number(target.port),
+        path: '/hook',
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), 'x-court-token': String(target.token) },
+        timeout: 600,
+      },
+      (res) => {
+        res.resume();
+        res.on('end', () => (res.statusCode < 300 ? done() : post(i + 1)));
+      },
+    );
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => post(i + 1));
+    req.end(body);
+  };
+  post(0);
 });

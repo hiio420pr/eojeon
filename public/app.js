@@ -53,15 +53,30 @@ function doFit() {
   try {
     if (mirrorSize) {
       term.resize(mirrorSize.cols, mirrorSize.rows);
+      fitFont();
       return;
     }
     fit.fit();
     send({ t: 'resize', cols: term.cols, rows: term.rows });
   } catch {}
 }
+// the other terminal may be far bigger than this pane: shrink the font until its whole screen fits
+const BASE_FONT = 13;
+function fitFont(tries = 4) {
+  const box = $('term');
+  const scr = box.querySelector('.xterm-screen');
+  if (!mirrorSize || !scr || !scr.offsetWidth) return;
+  const k = Math.min((box.clientWidth - 12) / scr.offsetWidth, (box.clientHeight - 6) / scr.offsetHeight);
+  const next = Math.max(4, Math.min(BASE_FONT, Math.floor(term.options.fontSize * k * 10) / 10));
+  if (Math.abs(next - term.options.fontSize) < 0.1) return;
+  term.options.fontSize = next;
+  if (tries > 1) requestAnimationFrame(() => fitFont(tries - 1)); // xterm re-measures cells after a font change
+}
 function setMirror(size) {
   mirrorSize = size || null;
+  if (!mirrorSize && term.options.fontSize !== BASE_FONT) term.options.fontSize = BASE_FONT;
   $('term').classList.toggle('mirror', !!mirrorSize);
+  document.querySelector('.layout').classList.toggle('mirroring', !!mirrorSize);
   doFit();
 }
 new ResizeObserver(() => doFit()).observe($('term'));
