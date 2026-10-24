@@ -1,0 +1,36 @@
+{
+  "name": "eojeon",
+  "version": "0.1.0",
+  "description": "Claude Code as a royal court: issue a decree, AI officials work, and they ask for your royal assent. Pixel-art Joseon throne hall around your real Claude Code CLI. Unofficial.",
+  "license": "MIT",
+  "type": "module",
+  "main": "server/index.js",
+  "bin": {
+    "eojeon": "server/index.js"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "demo": "node server/index.js --demo",
+    "check": "node --check server/index.js && node --check server/hook.js && node --check server/sessions.js && node --check server/sanitize.js",
+    "postinstall": "node scripts/fix-pty.js",
+    "fake-hooks": "node scripts/fake-hooks.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "galmuri": "2.40.3",
+    "node-pty": "1.1.0",
+    "ws": "8.22.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hiio420pr/eojeon.git"
+  },
+  "homepage": "https://github.com/hiio420pr/eojeon",
+  "bugs": {
+    "url": "https://github.com/hiio420pr/eojeon/issues"
+  }
+}

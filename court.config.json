@@ -1,0 +1,256 @@
+{
+  "_comment": "Everything you see on screen that is a name, word or color lives here. Edit freely; reload the page.",
+  "name": "어전 · eojeon",
+  "tagline": "Claude Code를 어전회의로. 교지를 내리면 AI 신하들이 일하고, 윤허를 청한다.",
+  "subtitle": "명령=교지 · 권한 승인=윤허 · 결과 보고=상소 · Claude Code 비공식 도구",
+  "palette": {
+    "paper": "#15171C",
+    "card": "#22252C",
+    "ink": "#EFE8DA",
+    "ink2": "#A8A090",
+    "hong": "#E8705F",
+    "cheong": "#6FAAD6",
+    "nok": "#74B48E",
+    "hwang": "#D9AE52",
+    "heuk": "#2B2F38",
+    "inju": "#F07A6A"
+  },
+  "pixel": {
+    "_comment": "Sprite fills (the concept's light-mode hexes read richer as pixel fills); outline is ink.",
+    "outline": "#1E1B17",
+    "hong": "#A8322A",
+    "cheong": "#1F5A82",
+    "nok": "#2F6B4A",
+    "hwang": "#B8862B",
+    "heuk": "#2B2F38",
+    "inju": "#C0392B",
+    "skin": "#E9C9A6",
+    "skinShade": "#C99E7A",
+    "stone": "#BDB6A8",
+    "stoneShade": "#A39C8E",
+    "paper": "#F3EDE1"
+  },
+  "robes": {
+    "_comment": "hong = 당상관(테두리 두 줄), cheong = 당하관(한 줄), nok = 7~9품·잡직(한 줄). 품계 숫자는 쓰지 않는다.",
+    "hong": {
+      "border": 2
+    },
+    "cheong": {
+      "border": 1
+    },
+    "nok": {
+      "border": 1
+    }
+  },
+  "king": {
+    "_comment": "임금(사용자) 캐릭터. 특정 역사 인물을 닮지 않은 일반 임금. robe = hong | cheong | nok | hwang | heuk 또는 '#RRGGBB'",
+    "title": "임금",
+    "robe": "hong"
+  },
+  "officials": {
+    "_comment": "key = Claude Code agent_type (subagent_type). 'main' is Claude itself. side: east(왼쪽: 기획·숫자·글) / west(오른쪽: 만들기·알리기). emblem = 흉배 자리 직무 문양.",
+    "main": {
+      "title": "영의정",
+      "short": "영",
+      "role": "신하들 일을 나누고 모아 올린다",
+      "robe": "hong",
+      "emblem": "scrolls",
+      "side": "east",
+      "seat": 0
+    },
+    "product-designer": {
+      "title": "홍문관 부제학",
+      "short": "홍",
+      "role": "무엇을 만들지 설계해 아뢴다",
+      "robe": "hong",
+      "emblem": "grid",
+      "side": "east",
+      "seat": 1
+    },
+    "data-analyst": {
+      "title": "호조판서",
+      "short": "호",
+      "role": "숫자를 세고, 작은 숫자를 부풀리지 않는다",
+      "robe": "hong",
+      "emblem": "abacus",
+      "side": "east",
+      "seat": 2
+    },
+    "pr-lead": {
+      "title": "예조판서",
+      "short": "예",
+      "role": "바깥에 우리를 알린다",
+      "robe": "hong",
+      "emblem": "flag",
+      "side": "east",
+      "seat": 3
+    },
+    "copywriter": {
+      "title": "승정원 승지",
+      "short": "승",
+      "role": "올리는 글을 다듬는다",
+      "robe": "hong",
+      "emblem": "brush",
+      "side": "east",
+      "seat": 4
+    },
+    "branding-expert": {
+      "title": "상서원 정",
+      "short": "상",
+      "role": "도장과 상징을 지킨다",
+      "robe": "cheong",
+      "emblem": "seal",
+      "side": "east",
+      "seat": 5
+    },
+    "marketer": {
+      "title": "평시서 령",
+      "short": "평",
+      "role": "시장을 살피고 누구에게 팔지 정한다",
+      "robe": "cheong",
+      "emblem": "scale",
+      "side": "west",
+      "seat": 0
+    },
+    "sns-manager": {
+      "title": "찰방",
+      "short": "찰",
+      "role": "소식을 파발로 곳곳에 띄운다",
+      "robe": "cheong",
+      "emblem": "hoof",
+      "side": "west",
+      "seat": 1
+    },
+    "apple-designer": {
+      "title": "공조정랑",
+      "short": "공",
+      "role": "애플 규격에 맞게 다듬는다",
+      "robe": "cheong",
+      "emblem": "square",
+      "side": "west",
+      "seat": 2
+    },
+    "uiux-expert": {
+      "title": "선공감 주부",
+      "short": "선",
+      "role": "화면 길을 짓고 고친다",
+      "robe": "cheong",
+      "emblem": "beam",
+      "side": "west",
+      "seat": 3
+    },
+    "animation-expert": {
+      "title": "장악원 악사",
+      "short": "장",
+      "role": "움직임의 박자를 맞춘다",
+      "robe": "nok",
+      "emblem": "drum",
+      "side": "west",
+      "seat": 4
+    },
+    "video-producer": {
+      "title": "도화서 화원",
+      "short": "도",
+      "role": "그림과 영상을 만든다",
+      "robe": "nok",
+      "emblem": "album",
+      "side": "west",
+      "seat": 5
+    }
+  },
+  "guests": {
+    "_comment": "Built-in / unknown agent types. They stand in the courtyard near the gate instead of a fixed desk.",
+    "general-purpose": {
+      "title": "별감",
+      "role": "무엇이든 맡아 하는 관원",
+      "robe": "nok"
+    },
+    "Explore": {
+      "title": "암행어사",
+      "role": "코드를 두루 살핀다",
+      "robe": "nok"
+    },
+    "Plan": {
+      "title": "비서관",
+      "role": "계획을 짠다",
+      "robe": "nok"
+    },
+    "claude-code-guide": {
+      "title": "규장각 검서관",
+      "role": "사용법을 찾아 아뢴다",
+      "robe": "nok"
+    },
+    "*": {
+      "title": "관리",
+      "role": "맡은 일을 한다",
+      "robe": "nok"
+    }
+  },
+  "historian": {
+    "title": "사관",
+    "robe": "nok"
+  },
+  "stamps": {
+    "ok": {
+      "label": "윤허",
+      "full": "윤허하노라",
+      "shape": "circle",
+      "mark": "○",
+      "color": "inju"
+    },
+    "no": {
+      "label": "불허",
+      "full": "불허한다",
+      "shape": "square",
+      "mark": "×",
+      "color": "inju"
+    },
+    "hold": {
+      "label": "보류",
+      "full": "보류",
+      "shape": "dotted",
+      "mark": "…",
+      "color": "ink2"
+    }
+  },
+  "permissionKeys": {
+    "_comment": "Keys sent to the terminal when a stamp button is pressed on a permission prompt. Claude Code's dialog: 1 = Yes, Esc = No (tell Claude what to do). hold sends nothing and focuses the terminal.",
+    "ok": "1",
+    "no": "\u001b",
+    "hold": ""
+  },
+  "phrases": {
+    "_comment": "사극 말투는 맨 앞 한 마디나 끝맺음 하나만, 정보는 지금 말로. {x} 는 자리표시자. 용어: 명령=교지, 권한 승인=윤허, 결과 보고=상소.",
+    "sessionStart": "조회를 엽니다 · {folder}",
+    "sessionResume": "지난 조회를 이어 갑니다 · {folder}",
+    "decree": "교지를 반포하였사옵니다",
+    "decreeSlash": "명({prompt})을 내리셨사옵니다",
+    "working": "{tool}: {summary}",
+    "workingSuffix": "중이옵니다",
+    "failed": "{tool} 못 했사옵니다",
+    "denied": "{tool} 불허되었사옵니다",
+    "enter": "{title} 입궐하였사옵니다",
+    "report": "영의정께 올림: {report}",
+    "reportEmpty": "영의정께 올림: 맡은 일 마쳤사옵니다",
+    "petition": "아뢰옵니다 — {tool}: {summary}",
+    "permission": "윤허를 청하옵니다",
+    "permissionHint": "도장을 찍으면 터미널 권한 창에 그대로 전해집니다. 다른 선택지는 터미널에서 고르세요.",
+    "waiting": "분부를 기다리는 중 · {elapsed}",
+    "idle": "분부를 기다리옵니다",
+    "stop": "상소 완료",
+    "stopLine": "아뢰옵니다 — 오늘 맡기신 일 마쳤사옵니다",
+    "sessionEnd": "퇴청하옵니다",
+    "standby": "{title} · 대기"
+  },
+  "scenes": {
+    "_comment": "concept.md 3절 장면 8종 → 이 도구의 이벤트",
+    "대기": "Notification(idle_prompt) / 이벤트 없음",
+    "작업 중": "PreToolUse",
+    "보고(내부)": "SubagentStop → 영의정 자리로",
+    "상소": "PermissionRequest / Notification(permission_prompt) → 어좌 앞",
+    "판정": "윤허·불허·보류 도장 버튼",
+    "판정 대기": "권한 창이 열린 채 시간 경과",
+    "하루 끝(퇴청)": "SessionEnd",
+    "실패 보고": "PostToolUseFailure → 먹물 얼룩"
+  }
+}
