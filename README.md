@@ -158,6 +158,8 @@ npx eojeon-cli --host 0.0.0.0     # 또는 Tailscale IP 하나만: --host 100.x.
 
 ## 작동 원리
 
+> hooks 를 내 설정에 직접 써 보고 싶다면: [Claude Code hooks 예제 4개 — 권한 요청 알림, 위험한 명령 막기, 작업 기록, 브라우저로 보내기](https://aiweekly.app/blog/claude-code-hooks-example/?utm_source=github&utm_medium=readme&utm_campaign=eojeon)
+
 1. 서버가 `node-pty` 로 `claude --settings <임시 settings.json>` 을 띄우고, WebSocket 으로 브라우저의 xterm.js 와 연결합니다.
 2. 임시 settings 에는 **hooks 만** 들어 있습니다(SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, PermissionDenied, SubagentStart, SubagentStop, Notification, Stop, StopFailure, SessionEnd). `~/.claude/settings.json` 은 건드리지 않고, 끝나면 임시 파일을 지웁니다.
 3. 각 hook 은 `server/hook.js` 를 실행합니다. hook JSON 을 **짧은 표시용 이벤트로 줄인 뒤**(도구 이름, 명령 첫 줄, 상대 경로, 비밀 가림) `127.0.0.1` 서버로만 보냅니다. 1.5초 안에 끝나고, 아무것도 출력하지 않고, 항상 exit 0 — Claude Code 를 막거나 결정을 바꾸지 않습니다.
@@ -257,6 +259,8 @@ CLI: `eojeon [--port n] [--cwd dir] [--host addr] [--no-open]`, `eojeon watch [-
 Each reports in a fixed-column table and ends with `Next action` and `Confidence`. The optional **studio** pack adds 11 product, design and marketing roles for solo app developers (`--pack studio`). Agents you already have are left alone and appear in the courtyard as generic officials.
 
 ### How it works
+
+> Want to use hooks yourself? Four copy-paste examples (Korean): [Claude Code hooks examples](https://aiweekly.app/blog/claude-code-hooks-example/?utm_source=github&utm_medium=readme&utm_campaign=eojeon)
 
 Runs your **real** `claude` CLI in a PTY, shown in the browser with xterm.js. Hooks are injected per run via `claude --settings <temp file>`; your own settings are untouched. The hook script trims each payload to a tiny display event (tool name, first line of a command, relative path; secrets masked) and posts it to `127.0.0.1` only. It always exits 0 within 1.5 s and never blocks Claude Code. Permission buttons send the real keys to the terminal (`1` = Yes, `Esc` = No). Speech bubbles never overlap and at most three show at once; everything is in the log on the right.
 
