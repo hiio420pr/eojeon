@@ -2,9 +2,11 @@
 // The screen is copied to the browser as it is drawn, and whatever is typed in the browser
 // (or a 윤허/불허 stamp) goes into this claude too. Without a running court it is plain claude.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
-import { runtimeFile } from './watch.js';
+import { runtimeFile, HOOK_EVENTS } from './watch.js';
 import { findClaude, loadPty, childEnv } from './pty.js';
 
 function readRuntime() {
@@ -96,9 +98,19 @@ export async function run(args) {
   const retry = setInterval(tryAttach, 3000);
   retry.unref?.();
 
-  // hooks: the court's settings when known (they find the court through the token in that file)
-  const settings = (readRuntime() || {}).settings;
-  const claudeArgs = settings && fs.existsSync(settings) ? ['--settings', settings, ...args] : args;
+  // hooks of our own, without a fixed port/token: hook.js finds whichever court is running through
+  // ~/.eojeon/runtime.json at each event, so answers show up even if the court starts or restarts later
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'eojeon-claude-'));
+  const settings = path.join(tmp, 'settings.json');
+  const hook = path.join(path.dirname(fileURLToPath(import.meta.url)), 'hook.js');
+  const q = (s) => `"${s.replace(/"/g, '\\"')}"`;
+  const command = `${q(process.execPath)} ${q(hook)}`;
+  const hooks = {};
+  for (const ev of HOOK_EVENTS) hooks[ev] = [{ hooks: [{ type: 'command', command, timeout: 5 }] }];
+  fs.writeFileSync(settings, JSON.stringify({ hooks }, null, 2), { mode: 0o600 });
+  const cleanup = () => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {} };
+  process.on('exit', cleanup);
+  const claudeArgs = ['--settings', settings, ...args];
   const { spawn } = loadPty();
   pty = spawn(claude, claudeArgs, { name: 'xterm-256color', cols, rows, cwd, env: childEnv() });
 

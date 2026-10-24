@@ -80,7 +80,16 @@ function writeSettings(port) {
   // lets `npm run fake-hooks` find this server (token stays on this machine, owner-only file)
   runtimePath = path.join(os.tmpdir(), `eojeon-${port}.json`);
   fs.writeFileSync(runtimePath, JSON.stringify({ port, token: TOKEN, hook: HOOK }), { mode: 0o600 });
-  // lets `eojeon watch` hooks (sessions outside the court) find this server
+  // the demo runs no claude: it must never take over (or later delete) the real court's runtime file
+  if (!DEMO) {
+    writeRuntime(port);
+    // put it back if something removed it while we run
+    setInterval(() => { if (!fs.existsSync(runtimeFile())) writeRuntime(port); }, 5000).unref();
+  }
+}
+
+// lets `eojeon watch` hooks and `eojeon claude` (sessions outside the court) find this server
+function writeRuntime(port) {
   try {
     fs.mkdirSync(eojeonDir(), { recursive: true, mode: 0o700 });
     fs.writeFileSync(runtimeFile(), JSON.stringify({ port, token: TOKEN, pid: process.pid, settings: settingsPath }), { mode: 0o600 });

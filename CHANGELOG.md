@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.5.1] - 2026-10-25
+
+### Fixed
+- `eojeon demo` no longer writes (and on exit deletes) `~/.eojeon/runtime.json`, which cut a running court off from `eojeon claude` and watch hooks. The court also rewrites that file if it goes missing.
+- `eojeon claude` always starts claude with its own hooks, which find the running court at each event, so answers and 상소 show up even if the court starts or restarts later.
+
 ## [0.5.0] - 2026-10-25
 
 ### Added
@@ -68,6 +74,7 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.5.1]: https://github.com/hiio420pr/eojeon/releases/tag/v0.5.1
 [0.5.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.5.0
 [0.4.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.4.0
 [0.3.2]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.2
