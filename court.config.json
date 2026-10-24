@@ -216,6 +216,15 @@
       "emblem": "album",
       "side": "west",
       "pack": "studio"
+    },
+    "jeollyeong": {
+      "title": "전령",
+      "short": "전",
+      "role": "완성된 글을 들고 SNS 고을마다 알린다",
+      "robe": "nok",
+      "emblem": "hoof",
+      "side": "west",
+      "pack": "studio"
     }
   },
   "guests": {
