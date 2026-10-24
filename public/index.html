@@ -58,16 +58,26 @@
         <p class="muted">내 터미널에서 쓰고 화면도 함께 보려면 그 터미널에서: <code>npx eojeon-cli claude</code> (예: <code>… claude --continue</code>)</p>
         <p class="muted">이미 열린 Claude Code 의 움직임만 보려면: <code>npx eojeon-cli watch</code></p>
       </div>
-      <form id="decreeForm" class="decree-bar" autocomplete="off">
-        <label for="decreeInput" class="decree-label">교지 쓰기</label>
-        <input id="decreeInput" type="text" placeholder="휴대폰용 입력칸 — 쓰고 Enter 하면 위 터미널에 들어갑니다" />
-        <button class="btn">반포</button>
-      </form>
     </section>
 
-    <aside class="log-wrap" aria-label="사관 일지">
-      <h2>사관 일지</h2>
-      <ol id="log" class="log"></ol>
+    <aside class="log-wrap" aria-label="답변과 사관 일지">
+      <div class="side-tabs" role="tablist">
+        <button type="button" id="tabChat" class="side-tab on" role="tab">답변</button>
+        <button type="button" id="tabLog" class="side-tab" role="tab">사관 일지</button>
+        <button type="button" id="termToggle" class="side-tab term-btn" title="Claude Code 터미널 화면 열기/닫기">터미널</button>
+      </div>
+      <div id="working" class="working hidden"></div>
+      <ol id="chat" class="chat">
+        <li class="chat-empty" id="chatEmpty">
+          <b>입궐</b>을 누르거나 내 터미널에서 <code>npx eojeon-cli claude</code> 로 켜면 여기에 교지와 답변만 모아 보입니다.
+          원래 CLI 화면은 위 <b>터미널</b> 버튼으로 엽니다.
+        </li>
+      </ol>
+      <ol id="log" class="log hidden"></ol>
+      <form id="chatForm" class="chat-form" autocomplete="off">
+        <textarea id="chatInput" rows="2" placeholder="교지를 쓰고 Enter (줄바꿈 Shift+Enter)"></textarea>
+        <button class="btn primary">반포</button>
+      </form>
     </aside>
   </main>
 

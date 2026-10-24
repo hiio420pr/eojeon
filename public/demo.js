@@ -72,7 +72,7 @@ export const SCRIPT = [
   [34.6, { ev: { type: 'PostToolUse', tool: 'Bash', summary: 'git diff --stat', toolUseId: 't8', ms: 30 } }],
   [34.6, { out: `${orange('⏺')} ${bold('Bash')}(git diff --stat)${nl}  ${dim('⎿  2 files changed, 38 insertions(+), 6 deletions(-)')}${nl}${nl}` }],
   [35.5, { out: `${orange('⏺')} 비밀번호 보기 버튼을 넣고 문구를 다듬었습니다. 테스트 24개 모두 통과했습니다.${nl}${nl}` }],
-  [35.6, { ev: { type: 'Stop' } }],
+  [35.6, { ev: { type: 'Stop', answer: '로그인 화면에 비밀번호 보기 버튼을 넣었습니다.\n\n- src/screens/Login.jsx: 눈 모양 버튼으로 보기/숨기기 전환\n- 안내 문구 2곳 다듬음\n- npm test 통과 (12개)\n\n(데모 화면의 예시 답변입니다)' } }],
   [42.0, { ev: { type: 'Notification', kind: 'idle_prompt', message: 'Claude is waiting for your input' } }],
   [48.0, { end: true }],
 ];

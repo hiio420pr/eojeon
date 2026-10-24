@@ -2,6 +2,7 @@
 // Runs inside the hook process, so only the trimmed result ever leaves Claude Code
 // (and even then only to 127.0.0.1). No file contents, no tool output, no full prompts.
 
+import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -100,6 +101,44 @@ function toolLabel(tool) {
   return tool.slice(0, 32);
 }
 
+// The 답변 view: the prompt and Claude's final answer as text (secrets masked, length-capped).
+const PROMPT_MAX = 2000;
+const ANSWER_MAX = 6000;
+export function longText(s, n) {
+  const t = redact(String(s || '')).replace(/\r/g, '').trim();
+  return t.length > n ? t.slice(0, n - 1) + '…' : t;
+}
+
+// Claude's text since the last real user message, read from the end of the session transcript.
+// Used when the Stop payload has no last_assistant_message (older Claude Code).
+export function lastAnswer(transcriptPath) {
+  try {
+    const st = fs.statSync(transcriptPath);
+    const len = Math.min(st.size, 512 * 1024);
+    const fd = fs.openSync(transcriptPath, 'r');
+    const b = Buffer.alloc(len);
+    fs.readSync(fd, b, 0, len, st.size - len);
+    fs.closeSync(fd);
+    const out = [];
+    for (const line of b.toString('utf8').split('\n').reverse()) {
+      let r;
+      try { r = JSON.parse(line); } catch { continue; }
+      const c = r.message?.content;
+      if (r.type === 'user') {
+        const isToolResult = Array.isArray(c) && c.some((x) => x?.type === 'tool_result');
+        if (!isToolResult && !r.isMeta) break; // reached the prompt that started this answer
+        continue;
+      }
+      if (r.type !== 'assistant') continue;
+      const texts = Array.isArray(c) ? c.filter((x) => x?.type === 'text').map((x) => x.text) : typeof c === 'string' ? [c] : [];
+      if (texts.length) out.unshift(texts.join('\n'));
+    }
+    return out.join('\n\n');
+  } catch {
+    return '';
+  }
+}
+
 // raw hook stdin JSON -> display event
 export function sanitize(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
@@ -123,7 +162,13 @@ export function sanitize(raw) {
       // Only a short, redacted preview of the prompt (the "royal decree").
       ev.prompt = clip(redact(String(r.prompt || '')), 60);
       ev.slash = /^\s*\//.test(String(r.prompt || ''));
+      ev.text = longText(r.prompt, PROMPT_MAX);
       break;
+    case 'Stop': {
+      const a = typeof r.last_assistant_message === 'string' ? r.last_assistant_message : lastAnswer(r.transcript_path);
+      ev.answer = longText(a, ANSWER_MAX);
+      break;
+    }
     case 'PreToolUse':
     case 'PostToolUse':
     case 'PostToolUseFailure':

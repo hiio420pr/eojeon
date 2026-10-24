@@ -102,12 +102,39 @@ code { font-family: ui-monospace, Menlo, monospace; color: var(--hwang); }
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   grid-template-rows: minmax(240px, 56%) minmax(220px, 1fr);
   grid-template-areas: 'stage log' 'term log';
 }
-/* another terminal is mirrored (eojeon claude): its screen is usually big, so give it most of the height */
-.layout.mirroring { grid-template-rows: minmax(150px, 32%) minmax(260px, 1fr); }
+/* default: the court takes the whole left side; the terminal opens only on demand (터미널 button) */
+.layout { grid-template-rows: minmax(0, 1fr) 0; }
+.layout .term-wrap { display: none; }
+.layout.show-term { grid-template-rows: minmax(200px, 50%) minmax(220px, 1fr); }
+.layout.show-term .term-wrap { display: flex; }
+.term-hint { inset: 0; }
+
+/* right panel: 답변 / 사관 일지 tabs */
+.side-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--line); }
+.side-tab {
+  font-family: var(--pixel); font-size: 12px; color: var(--ink2); background: none; border: 0;
+  padding: 7px 10px; border-bottom: 2px solid transparent; cursor: pointer;
+}
+.side-tab.on { color: var(--hwang); border-bottom-color: var(--hwang); }
+.side-tab.term-btn { margin-left: auto; }
+.layout.show-term .side-tab.term-btn { color: var(--hwang); }
+.working { padding: 6px 12px; font-size: 12px; color: var(--hwang); border-bottom: 1px dashed #2C3038; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.working.hidden, .log.hidden, .chat.hidden { display: none; }
+.chat { list-style: none; margin: 0; padding: 8px 10px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.chat li { font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; border-radius: 6px; padding: 8px 10px; }
+.chat .q { align-self: flex-end; max-width: 88%; background: #3A2A20; color: var(--px-paper); }
+.chat .a { background: var(--paper); border: 1px solid var(--line); color: var(--ink); }
+.chat .who { display: block; font-family: var(--pixel); font-size: 10px; color: var(--ink2); margin-bottom: 2px; }
+.chat .chat-empty { color: var(--ink2); font-size: 12px; white-space: normal; }
+.chat-form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); align-items: flex-end; }
+.chat-form textarea {
+  flex: 1; min-width: 0; resize: none; background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 4px; padding: 7px 9px; font: inherit; font-size: 13px;
+}
 .stage-wrap { grid-area: stage; position: relative; overflow: hidden; background: #0F1115; display: grid; place-items: center; }
 .term-wrap { grid-area: term; position: relative; display: flex; flex-direction: column; border-top: 1px solid var(--line); min-height: 0; }
 .log-wrap { grid-area: log; border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--card); }
@@ -117,9 +144,10 @@ body { height: 100vh; }
   body { height: auto; }
   .layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 420px 280px;
+    grid-template-rows: auto 0 480px;
     grid-template-areas: 'stage' 'term' 'log';
   }
+  .layout.show-term { grid-template-rows: auto 380px 480px; }
   .stage-wrap { aspect-ratio: 400 / 224; }
   .log-wrap { border-left: 0; border-top: 1px solid var(--line); }
   .top { padding: 10px 16px; }
@@ -295,8 +323,6 @@ body { height: 100vh; }
 }
 .term-hint p { margin: 4px 0; }
 .term-hint.hidden { display: none; }
-/* one input on computers: the terminal. The decree bar is for touch screens, where typing into xterm is awkward */
-@media (hover: hover) and (pointer: fine) { .decree-bar { display: none !important; } .term-hint { inset: 0; } }
 .decree-bar { display: flex; gap: 8px; align-items: center; padding: 8px; border-top: 1px solid var(--line); background: var(--card); }
 .decree-label { font-family: var(--pixel); font-size: 12px; color: var(--hwang); white-space: nowrap; }
 .decree-bar input {

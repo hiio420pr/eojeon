@@ -46,3 +46,25 @@ test('sanitize keeps only a short, redacted display event', () => {
 test('toolSummary shows only the first line of a command', () => {
   assert.equal(toolSummary('Bash', { command: 'echo hi\nrm -rf /' }), 'echo hi');
 });
+
+test('답변 view: prompt text and final answer, secrets masked', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { sanitize: s } = await import('../server/sanitize.js');
+  const p = s({ hook_event_name: 'UserPromptSubmit', prompt: 'deploy with API_KEY=abc123secret please' });
+  assert.match(p.text, /API_KEY=\*\*\*/);
+  assert.equal(s({ hook_event_name: 'Stop', last_assistant_message: 'done ✓' }).answer, 'done ✓');
+  // older Claude Code: read the transcript tail
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'eojeon-tr-')), 't.jsonl');
+  const lines = [
+    { type: 'user', message: { content: 'old question' } },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'old answer' }] } },
+    { type: 'user', message: { content: 'new question' } },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'looking' }, { type: 'tool_use', name: 'Bash' }] } },
+    { type: 'user', message: { content: [{ type: 'tool_result', content: 'x' }] } },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'final answer' }] } },
+  ];
+  fs.writeFileSync(f, lines.map((l) => JSON.stringify(l)).join('\n') + '\n');
+  assert.equal(s({ hook_event_name: 'Stop', transcript_path: f }).answer, 'looking\n\nfinal answer');
+});

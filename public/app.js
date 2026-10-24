@@ -76,7 +76,6 @@ function setMirror(size) {
   mirrorSize = size || null;
   if (!mirrorSize && term.options.fontSize !== BASE_FONT) term.options.fontSize = BASE_FONT;
   $('term').classList.toggle('mirror', !!mirrorSize);
-  document.querySelector('.layout').classList.toggle('mirroring', !!mirrorSize);
   doFit();
 }
 new ResizeObserver(() => doFit()).observe($('term'));
@@ -200,8 +199,80 @@ function addLog(ev) {
   if (atBottom) logEl.scrollTop = logEl.scrollHeight;
 }
 
+// ---------- 답변 (prompts and final answers only) ----------
+const chatEl = $('chat');
+const workingEl = $('working');
+function addChat(kind, text, time) {
+  if (!text) return;
+  $('chatEmpty')?.remove();
+  const li = document.createElement('li');
+  li.className = kind;
+  const who = document.createElement('span');
+  who.className = 'who';
+  const d = new Date(time || Date.now());
+  who.textContent = `${kind === 'q' ? '교지' : '상소'} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  li.append(who, document.createTextNode(text));
+  const atBottom = chatEl.scrollTop + chatEl.clientHeight >= chatEl.scrollHeight - 40;
+  chatEl.appendChild(li);
+  while (chatEl.children.length > 200) chatEl.firstChild.remove();
+  if (atBottom || kind === 'q') chatEl.scrollTop = chatEl.scrollHeight;
+}
+function setWorking(text) {
+  workingEl.classList.toggle('hidden', !text);
+  workingEl.textContent = text ? `… ${text}` : '';
+}
+function chatEvent(ev, replay) {
+  switch (ev.type) {
+    case 'UserPromptSubmit':
+      if (!ev.slash) addChat('q', ev.text || ev.prompt, ev.time);
+      if (!replay) setWorking('생각하는 중');
+      break;
+    case 'PreToolUse':
+      if (!replay) setWorking(`${titleOf(ev.agentType)} · ${ev.tool}${ev.summary ? ': ' + ev.summary : ''}`);
+      break;
+    case 'PermissionRequest':
+      if (!replay) setWorking(`윤허를 기다리는 중 — ${ev.tool}${ev.summary ? ': ' + ev.summary : ''}`);
+      break;
+    case 'Stop':
+      addChat('a', ev.answer, ev.time);
+      if (!replay) setWorking('');
+      break;
+    case 'StopFailure':
+    case 'SessionEnd':
+    case 'PtyExit':
+      if (!replay) setWorking('');
+      break;
+    default:
+      break;
+  }
+}
+
+// ---------- side tabs and the terminal toggle ----------
+const layoutEl = document.querySelector('.layout');
+function showTab(which) {
+  $('tabChat').classList.toggle('on', which === 'chat');
+  $('tabLog').classList.toggle('on', which === 'log');
+  chatEl.classList.toggle('hidden', which !== 'chat');
+  logEl.classList.toggle('hidden', which !== 'log');
+  try { localStorage.setItem('eojeon.tab', which); } catch {}
+}
+$('tabChat').addEventListener('click', () => showTab('chat'));
+$('tabLog').addEventListener('click', () => showTab('log'));
+let savedTab = 'chat';
+try { savedTab = localStorage.getItem('eojeon.tab') || 'chat'; } catch {}
+showTab(savedTab === 'log' ? 'log' : 'chat');
+function showTerm(on) {
+  layoutEl.classList.toggle('show-term', on);
+  requestAnimationFrame(() => {
+    doFit();
+    if (on) term.focus();
+  });
+}
+$('termToggle').addEventListener('click', () => showTerm(!layoutEl.classList.contains('show-term')));
+
 function onEvent(ev, opts = {}) {
   addLog(ev);
+  chatEvent(ev, !!opts.replay);
   court.handle(ev, opts);
   if (ev.ext && !running && !DEMO) {
     $('termHintMain').innerHTML = `바깥 터미널의 Claude Code 를 보는 중입니다 (<b>${escapeHtml(ev.folder || '')}</b>) — 보기 전용`;
@@ -342,30 +413,35 @@ $('launch').addEventListener('submit', async (e) => {
   court.reset();
   doFit();
   send({ t: 'start', cwd, mode, sessionId, permissionMode: pmodeSel.value });
-  term.focus();
+  showTerm(true);
 });
 $('stopBtn').addEventListener('click', () => {
   if (!DEMO && running && confirm('claude 를 끝낼까요? (진행 중인 일은 멈춥니다)')) send({ t: 'stop' });
 });
 
-// ---------- decree input (sent straight into the PTY) ----------
-const decreeIn = $('decreeInput');
-$('decreeForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const text = decreeIn.value;
+// ---------- the one input: a decree, typed straight into claude ----------
+const chatIn = $('chatInput');
+function submitDecree() {
+  const text = chatIn.value;
   if (!text.trim()) return;
   if (!running && !DEMO) {
-    setStatus('error', '먼저 입궐(시작)하세요');
+    setStatus('error', '먼저 입궐(시작)하거나 내 터미널에서 eojeon claude 로 켜세요');
     return;
   }
   // text first, Enter a beat later so Claude Code doesn't treat it as a pasted newline
-  sendInput(text);
-  setTimeout(() => sendInput('\r'), 60);
-  decreeIn.value = '';
-  term.focus();
+  sendInput(text.replace(/\s*\n\s*/g, ' '));
+  setTimeout(() => sendInput('\r'), 80);
+  chatIn.value = '';
+}
+$('chatForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  submitDecree();
 });
-decreeIn.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.isComposing) e.preventDefault(); // Korean IME: finish composition first
+chatIn.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.shiftKey) return;
+  e.preventDefault();
+  if (e.isComposing) return; // Korean IME: finish composition first
+  submitDecree();
 });
 
 // ---------- connection ----------

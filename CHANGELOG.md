@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.4.0] - 2026-10-25
+
+### Changed
+- Layout: the court takes the whole left side. The right panel has **답변** (your decrees and Claude's final answers only, as a conversation) and **사관 일지** tabs, a one-line "now working on" status, and the single input. The raw CLI screen opens only with the **터미널** button (opened automatically when you start claude from the page).
+- The separate 교지 쓰기 bar is gone; the panel input is the one input (Enter sends, Shift+Enter for a new line).
+
+### Privacy
+- For the 답변 tab, hook events now carry your prompt (up to 2,000 chars) and Claude's final answer (up to 6,000 chars; from `last_assistant_message`, or the end of the session transcript on older Claude Code). Secrets are masked as before; they go only to this computer or keyed devices (`--host`).
+
 ## [0.3.2] - 2026-10-25
 
 ### Fixed
@@ -54,6 +63,7 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.4.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.4.0
 [0.3.2]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.2
 [0.3.1]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.1
 [0.3.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.3.0
