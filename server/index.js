@@ -110,7 +110,7 @@ function sysEvent(type, extra = {}) {
 
 // node-pty ships prebuilt binaries for macOS (arm64/x64) and Windows (x64/arm64).
 // On Linux the prebuilt fork @homebridge/node-pty-prebuilt-multiarch is used instead.
-// Both are optionalDependencies so `npx eojeon` never fails to install (demo still works).
+// Both are optionalDependencies so `npx eojeon-cli` never fails to install (demo still works).
 const PTY_MODULES = ['node-pty', '@homebridge/node-pty-prebuilt-multiarch'];
 let ptyMod = null;
 function loadPty() {

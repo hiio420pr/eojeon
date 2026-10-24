@@ -20,9 +20,9 @@
 **1. npx (가장 쉬움)**
 
 ```bash
-npx eojeon            # http://localhost:4747 이 열립니다
-npx eojeon demo       # claude 없이 녹화된 장면 재생 (사용량 0)
-npx eojeon init       # 지금 폴더에 육조 신하 6명 들이기
+npx eojeon-cli            # http://localhost:4747 이 열립니다
+npx eojeon-cli demo       # claude 없이 녹화된 장면 재생 (사용량 0)
+npx eojeon-cli init       # 지금 폴더에 육조 신하 6명 들이기
 ```
 
 **2. Claude Code 플러그인**
@@ -36,11 +36,11 @@ Claude Code 안에서:
 
 (Claude Code 2.1.275 이상은 한 줄로: `/plugin install eojeon --marketplace hiio420pr/eojeon`)
 
-그다음 `/eojeon` 또는 "어전 열어줘" 라고 하면 Claude 가 `npx -y eojeon@latest` 를 백그라운드로 띄우고 주소를 알려 줍니다(어전 본체는 늘 최신 npm 버전). 이미 떠 있으면 그대로 씁니다. 플러그인에는 육조 6명이 `eojeon:ijo` … `eojeon:gongjo` 로 들어 있습니다.
+그다음 `/eojeon` 또는 "어전 열어줘" 라고 하면 Claude 가 `npx -y eojeon-cli@latest` 를 백그라운드로 띄우고 주소를 알려 줍니다(어전 본체는 늘 최신 npm 버전). 이미 떠 있으면 그대로 씁니다. 플러그인에는 육조 6명이 `eojeon:ijo` … `eojeon:gongjo` 로 들어 있습니다.
 
 **업데이트 받기 (플러그인):** 우리가 만든 마켓은 자동 업데이트가 기본으로 꺼져 있습니다. `/plugin` → Marketplaces → eojeon → **Enable auto-update** 를 한 번 켜 두세요. 직접 받으려면 `/plugin marketplace update eojeon`. 새 버전은 다음 세션(또는 `/reload-plugins`)부터 적용됩니다.
 
-**npx 와 플러그인 둘 다 설치할 필요는 없습니다.** 플러그인은 속에서 `npx eojeon` 을 대신 실행합니다. 플러그인을 쓰면 `npx eojeon init` 은 하지 마세요(육조가 두 벌 생김).
+**npx 와 플러그인 둘 다 설치할 필요는 없습니다.** 플러그인은 속에서 `npx eojeon-cli` 을 대신 실행합니다. 플러그인을 쓰면 `npx eojeon-cli init` 은 하지 마세요(육조가 두 벌 생김).
 
 **3. git clone**
 
@@ -126,9 +126,9 @@ npm start          # = node cli/eojeon.js
 
 1. [Node.js LTS](https://nodejs.org) 설치 (20 이상 권장).
 2. [Claude Code](https://code.claude.com/docs/en/setup) 설치·로그인 — Windows 에서는 [Git for Windows](https://git-scm.com/download/win) 가 함께 필요합니다. PowerShell 에서 `claude --version` 이 나오면 준비 끝.
-3. PowerShell 에서 `npx eojeon` → 브라우저에 http://localhost:4747 이 열립니다.
+3. PowerShell 에서 `npx eojeon-cli` → 브라우저에 http://localhost:4747 이 열립니다.
 4. 처음 실행 때 Windows 방화벽 창이 뜨면 '개인 네트워크'만 허용하면 됩니다(어전은 127.0.0.1 에서만 듣습니다).
-5. 막히면: `claude` 를 못 찾는다 → 새 PowerShell 창을 열거나 Claude Code 설치 경로를 PATH 에 추가 / 4747 포트가 사용 중 → `npx eojeon --port 4800` / 한글이 깨진다 → 브라우저를 새로 고침(D2Coding 글꼴 로드 후 터미널이 열림).
+5. 막히면: `claude` 를 못 찾는다 → 새 PowerShell 창을 열거나 Claude Code 설치 경로를 PATH 에 추가 / 4747 포트가 사용 중 → `npx eojeon-cli --port 4800` / 한글이 깨진다 → 브라우저를 새로 고침(D2Coding 글꼴 로드 후 터미널이 열림).
 
 Windows 는 아직 개발자가 직접 시험하지 못했습니다. 문제가 있으면 [이슈](https://github.com/hiio420pr/eojeon/issues)로 알려 주세요.
 
@@ -181,7 +181,7 @@ claude plugin validate .
 
 ### Install (pick one)
 
-1. **npx**: `npx eojeon` → http://localhost:4747 · `npx eojeon demo` (no claude, no usage) · `npx eojeon init` (add the Six Ministries to `./.claude/agents`)
+1. **npx**: `npx eojeon-cli` → http://localhost:4747 · `npx eojeon-cli demo` (no claude, no usage) · `npx eojeon-cli init` (add the Six Ministries to `./.claude/agents`)
 2. **Claude Code plugin**: `/plugin marketplace add hiio420pr/eojeon` then `/plugin install eojeon@eojeon` (or on 2.1.275+: `/plugin install eojeon --marketplace hiio420pr/eojeon`). Then type `/eojeon` or "open the court". Third-party marketplaces don't auto-update by default: run `/plugin` → Marketplaces → eojeon → Enable auto-update (or `/plugin marketplace update eojeon`). You don't need both npx and the plugin. The plugin also provides the six agents as `eojeon:ijo` … `eojeon:gongjo`.
 3. **git clone**: `git clone https://github.com/hiio420pr/eojeon.git && cd eojeon && npm install && npm start`
 

@@ -12,7 +12,7 @@ First public version.
 - 사관 일지 (event log), 교지 쓰기 input for Korean IME, session picker (`--continue`, `--resume <id>`), permission mode picker (`--permission-mode`: manual, acceptEdits, plan, auto, dontAsk).
 - 육조 (Six Ministries) default subagents: `ijo`, `hojo`, `yejo`, `byeongjo`, `hyeongjo`, `gongjo`, and the optional `studio` pack (11 roles).
 - First-run prompt "육조를 들이시겠사옵니까?" and `eojeon init [dir] [--pack yukjo|studio|all]`; existing files are never overwritten.
-- CLI `eojeon` (`demo`, `init`, `--port`, `--cwd`, `--no-open`, `--help`, `--version`) for `npx eojeon`.
+- CLI `eojeon` (`demo`, `init`, `--port`, `--cwd`, `--no-open`, `--help`, `--version`) for `npx eojeon-cli`.
 - Claude Code plugin and single-plugin marketplace (`/plugin install eojeon@eojeon`) with the `/eojeon` skill and the six agents as `eojeon:*`.
 - Speech bubbles avoid each other and the petition panel; at most three at once, the rest stay in the log.
 - 4-frame walk cycle with arm swing.
