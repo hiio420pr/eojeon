@@ -1,5 +1,7 @@
 # 어전 · eojeon
 
+<p align="center"><img src="docs/hero.gif" width="900" alt="어전 데모: 임금이 교지를 내리면 신하들이 입궐해 일하고, 윤허를 청하자 윤허하노라 도장이 찍힌다. 아래는 Claude Code 터미널(데모 재생, 실제 claude 실행 없음). (Demo: a decree is issued, subagent officials work, a permission request is approved with a royal seal.)"></p>
+
 **Claude Code를 어전회의로. 교지를 내리면 AI 신하들이 일하고, 윤허를 청한다.**
 
 브라우저에 픽셀 아트 조선 궁궐(어전)과 **내 Claude Code 터미널**을 함께 띄우는 로컬 웹 앱입니다.
