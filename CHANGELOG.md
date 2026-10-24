@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## [0.2.0] - 2026-10-24
+
+Fixes from the first day of use.
+
+### Added
+- `eojeon watch` / `eojeon watch --off`: show Claude Code sessions running outside the court (other terminals, IDEs), watch-only. Hooks go into `~/.claude/settings.json` (backup kept, only our entries are removed on `--off`); the hook copy lives in `~/.eojeon/hook/` and finds the court through `~/.eojeon/runtime.json`.
+- `--host <addr>` (and `--new-key`): open the court to other devices, e.g. over Tailscale. Requires an access key printed at start (`?key=…` once, then an HttpOnly cookie for 30 days). The terminal still answers on 127.0.0.1 without a key.
+- 전령 (`jeollyeong`) office for an SNS-posting agent.
+
+### Changed
+- One input on computers: the terminal. The 교지 쓰기 bar now shows only on touch screens.
+- Petitions from outside sessions show "그 터미널에서 답하소서" instead of stamps; their log lines are tagged with the folder.
+
 ## [0.1.0] - 2026-10-24
 
 First public version.
@@ -22,4 +35,5 @@ First public version.
 - Hook payloads trimmed and secrets masked before leaving the hook process.
 - `scripts/check-publish.js` blocks publishing local paths, e-mail addresses or token-shaped strings.
 
+[0.2.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hiio420pr/eojeon/releases/tag/v0.1.0

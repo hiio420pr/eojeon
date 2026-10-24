@@ -544,6 +544,7 @@ export class Court {
       b.addEventListener('click', () => this.petitionAction(k));
     }
     el('div', 'p-hint', this.pet, this.ph.permissionHint || '');
+    el('div', 'p-ext', this.pet, '바깥 터미널의 조회입니다 — 그 터미널에서 답하소서');
     this.pet.title = this.ph.permissionHint || '';
     // stamp + plaque
     this.stamp = el('div', 'stamp', o);
@@ -730,7 +731,7 @@ export class Court {
   }
 
   // ---------- petition (permission request) ----------
-  openPetition({ tool, summary, message, actor }) {
+  openPetition({ tool, summary, message, actor, ext = false }) {
     const who = actor || this.main;
     const head = tool ? fmt(this.ph.petition, { tool, summary: summary || '' }) : `아뢰옵니다 — ${message || '권한이 필요합니다'}`;
     if (this.petition && !this.petition.closed) {
@@ -739,8 +740,10 @@ export class Court {
     } else {
       this.stats.petitions++;
     }
-    this.petition = { tool, summary, since: performance.now(), actor: who, closed: false };
+    this.petition = { tool, summary, since: performance.now(), actor: who, closed: false, ext };
     this.petHead.textContent = head;
+    // a session outside the court (eojeon watch): the stamps can't reach its terminal
+    this.pet.classList.toggle('ext', ext);
     this.pet.classList.add('on');
     this.pet.classList.remove('min');
     who.carry = true;
@@ -749,7 +752,7 @@ export class Court {
   }
 
   petitionAction(kind) {
-    if (!this.petition || this.petition.closed) return;
+    if (!this.petition || this.petition.closed || this.petition.ext) return;
     if (kind === 'hold') {
       this.pet.classList.add('min');
       this.stampVerdict('hold');
@@ -829,7 +832,7 @@ export class Court {
         actor.doneWork(false, fmt(ph.failed, { tool: ev.tool }));
         break;
       case 'PermissionRequest':
-        this.openPetition({ tool: ev.tool, summary: ev.summary, actor });
+        this.openPetition({ tool: ev.tool, summary: ev.summary, actor, ext: !!ev.ext });
         break;
       case 'PermissionDenied':
         if (this.petition && !this.petition.closed) this.closePetition('no');
@@ -837,7 +840,7 @@ export class Court {
         break;
       case 'Notification':
         if (ev.kind === 'permission_prompt') {
-          if (!this.petition || this.petition.closed) this.openPetition({ message: ev.message, actor });
+          if (!this.petition || this.petition.closed) this.openPetition({ message: ev.message, actor, ext: !!ev.ext });
         } else if (ev.kind === 'idle_prompt') {
           this.main.say(ph.idle || '분부를 기다리옵니다', '', 120_000);
         } else if (ev.message) {

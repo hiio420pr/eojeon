@@ -57,7 +57,7 @@ new ResizeObserver(() => doFit()).observe($('term'));
 term.onData((d) => {
   sendInput(d);
   // answered the permission dialog directly in the terminal: Esc = refused
-  if (d === '\x1b' && court.petition && !court.petition.closed) {
+  if (d === '\x1b' && court.petition && !court.petition.closed && !court.petition.ext) {
     court.closePetition('no');
     addLog({ type: 'Verdict', time: Date.now(), verdict: 'no' });
   }
@@ -162,7 +162,8 @@ function addLog(ev) {
   ic.textContent = icon;
   const tx = document.createElement('span');
   tx.className = 'tx';
-  tx.textContent = text;
+  // sessions outside the court (eojeon watch) carry their folder name
+  tx.textContent = ev.ext ? `⇢ ${ev.folder || '바깥'} · ${text}` : text;
   li.append(t, ic, tx);
   if (ev.toolUseId) byTool.set(ev.toolUseId, li);
   const atBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 30;
@@ -174,6 +175,12 @@ function addLog(ev) {
 function onEvent(ev, opts = {}) {
   addLog(ev);
   court.handle(ev, opts);
+  if (ev.ext && !running && !DEMO) {
+    $('termHintMain').innerHTML = `바깥 터미널의 Claude Code 를 보는 중입니다 (<b>${escapeHtml(ev.folder || '')}</b>) — 보기 전용`;
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 // ---------- launch controls ----------
@@ -393,5 +400,6 @@ if (DEMO) {
   });
 } else {
   if (!info.claudeFound) setStatus('error', 'claude 를 찾지 못했습니다 — Claude Code 를 설치하세요');
+  if (info.remote) $('footLocal').textContent = '다른 기기 접속 켜짐 (--host) · 접속 키가 있는 기기만 들어올 수 있습니다.';
   connect();
 }

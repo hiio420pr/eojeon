@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Local server: serves the pixel court UI, runs your real `claude` in a PTY,
 // bridges it to the browser terminal over WebSocket, and receives Claude Code
-// hook events (injected with `claude --settings <temp file>`). Binds to 127.0.0.1 only.
+// hook events (injected with `claude --settings <temp file>`). Binds to 127.0.0.1 only,
+// unless started with --host (other devices, e.g. over Tailscale), which then requires an access key.
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -14,6 +15,7 @@ import { WebSocketServer } from 'ws';
 import { listSessions } from './sessions.js';
 import { sanitize } from './sanitize.js';
 import { inspect as inspectAgents, install as installAgents, PACKS } from './agents.js';
+import { HOOK_EVENTS, eojeonDir, runtimeFile } from './watch.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,8 +33,27 @@ const DEMO = flag('--demo');
 const NO_OPEN = flag('--no-open') || process.env.COURT_NO_OPEN === '1';
 const WANT_PORT = Number(opt('--port', process.env.COURT_PORT || 4747));
 const DEFAULT_CWD = path.resolve(expandHome(opt('--cwd', process.env.INIT_CWD || process.cwd())));
+const HOST = opt('--host', process.env.COURT_HOST || '127.0.0.1');
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
+const REMOTE = !LOOPBACK.has(HOST);
 const TOKEN = crypto.randomBytes(18).toString('hex');
+const KEY = REMOTE ? remoteKey(flag('--new-key')) : '';
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+
+// one key per machine, kept in ~/.eojeon/remote-key so a bookmarked address keeps working; --new-key rotates it
+function remoteKey(rotate) {
+  const file = path.join(eojeonDir(), 'remote-key');
+  if (!rotate) {
+    try {
+      const k = fs.readFileSync(file, 'utf8').trim();
+      if (/^[0-9a-f]{32,}$/.test(k)) return k;
+    } catch {}
+  }
+  const k = crypto.randomBytes(24).toString('hex');
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(file, k + '\n', { mode: 0o600 });
+  return k;
+}
 
 function expandHome(p) {
   return typeof p === 'string' && (p === '~' || p.startsWith('~/')) ? path.join(os.homedir(), p.slice(1)) : p;
@@ -56,11 +77,6 @@ function findClaude() {
 const CLAUDE = findClaude();
 
 // ---------- temp settings with hooks ----------
-const HOOK_EVENTS = [
-  'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure',
-  'PermissionRequest', 'PermissionDenied', 'SubagentStart', 'SubagentStop', 'Notification',
-  'Stop', 'StopFailure', 'SessionEnd',
-];
 let tmpDir = null;
 let settingsPath = null;
 let runtimePath = null;
@@ -76,11 +92,20 @@ function writeSettings(port) {
   // lets `npm run fake-hooks` find this server (token stays on this machine, owner-only file)
   runtimePath = path.join(os.tmpdir(), `eojeon-${port}.json`);
   fs.writeFileSync(runtimePath, JSON.stringify({ port, token: TOKEN, hook: HOOK }), { mode: 0o600 });
+  // lets `eojeon watch` hooks (sessions outside the court) find this server
+  try {
+    fs.mkdirSync(eojeonDir(), { recursive: true, mode: 0o700 });
+    fs.writeFileSync(runtimeFile(), JSON.stringify({ port, token: TOKEN, pid: process.pid }), { mode: 0o600 });
+  } catch {}
 }
 
 function cleanup() {
   try { if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
   try { if (runtimePath) fs.rmSync(runtimePath, { force: true }); } catch {}
+  try {
+    // only our own: a second court may have taken over the file
+    if (JSON.parse(fs.readFileSync(runtimeFile(), 'utf8')).pid === process.pid) fs.rmSync(runtimeFile(), { force: true });
+  } catch {}
 }
 
 // ---------- state ----------
@@ -162,6 +187,7 @@ function startClaude({ cwd, mode, sessionId, permissionMode }) {
     'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_CODE_BRIDGE_SESSION_ID', 'CLAUDE_CODE_EXECPATH', 'CLAUDE_PID', 'CLAUDE_EFFORT',
   ]) delete env[k];
   for (const k of Object.keys(env)) if (k.startsWith('npm_')) delete env[k];
+  env.EOJEON_CHILD = '1'; // `eojeon watch` hooks skip this session (it already reports through --settings)
 
   const { spawn } = loadPty();
   pty = spawn(CLAUDE, args, { name: 'xterm-256color', cols: size.cols, rows: size.rows, cwd: dir, env });
@@ -211,6 +237,27 @@ function allowedHost(h) {
 function allowedOrigin(o) {
   return o === `http://localhost:${PORT}` || o === `http://127.0.0.1:${PORT}` || o === `http://[::1]:${PORT}`;
 }
+const fromLoopback = (req) => /^(127\.|::1$|::ffff:127\.)/.test(req.socket.remoteAddress || '');
+function cookieKey(req) {
+  const m = /(?:^|;\s*)eojeon_key=([0-9a-f]+)/.exec(req.headers.cookie || '');
+  return m ? m[1] : '';
+}
+function keyOk(k) {
+  return !!KEY && typeof k === 'string' && k.length === KEY.length && crypto.timingSafeEqual(Buffer.from(k), Buffer.from(KEY));
+}
+// Who may use the page and the terminal:
+//  - this computer, under a localhost name (DNS-rebinding guard) — as before
+//  - with --host: anyone holding the access key (cookie set from ?key=… on the first visit)
+function access(req) {
+  if (fromLoopback(req) && allowedHost(req.headers.host || '')) return 'local';
+  if (REMOTE && keyOk(cookieKey(req))) return 'key';
+  return '';
+}
+// same-origin check for anything that writes (terminal socket, agent install)
+function sameOrigin(req, who) {
+  const o = req.headers.origin || '';
+  return who === 'local' ? allowedOrigin(o) : o === `http://${req.headers.host}`;
+}
 
 function sendFile(res, file) {
   fs.readFile(file, (err, data) => {
@@ -247,17 +294,13 @@ function loadConfig() {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'court.config.json'), 'utf8'));
 }
 
-const server = http.createServer(async (req, res) => {
-  // DNS-rebinding guard: only answer to localhost names
-  if (!allowedHost(req.headers.host || '')) {
-    res.writeHead(403).end('forbidden host');
-    return;
-  }
+async function handle(req, res) {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const p = url.pathname;
 
   if (p === '/hook' && req.method === 'POST') {
-    if (req.headers['x-court-token'] !== TOKEN) {
+    // hooks always run on this computer
+    if (!fromLoopback(req) || req.headers['x-court-token'] !== TOKEN) {
       res.writeHead(403).end();
       return;
     }
@@ -273,9 +316,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  let who = access(req);
+  if (!who && REMOTE && req.method === 'GET' && keyOk(url.searchParams.get('key'))) {
+    // first visit from another device: trade the key in the address for a cookie, then drop it from the address bar
+    url.searchParams.delete('key');
+    res.writeHead(302, {
+      'set-cookie': `eojeon_key=${KEY}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}`,
+      location: url.pathname + url.search,
+      'cache-control': 'no-store',
+    });
+    res.end();
+    return;
+  }
+  if (!who) {
+    // DNS-rebinding guard: only localhost names, or the access key with --host
+    res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }).end(
+      REMOTE ? 'forbidden — 어전을 켠 터미널에 찍힌 주소(?key=…)로 한 번 열어 주세요' : 'forbidden host',
+    );
+    return;
+  }
+
   if (p === '/api/agents/install' && req.method === 'POST') {
     // writes files: only from our own page (same-origin fetch always sends Origin) and only JSON
-    if (!allowedOrigin(req.headers.origin || '') || !/^application\/json/.test(req.headers['content-type'] || '')) {
+    if (!sameOrigin(req, who) || !/^application\/json/.test(req.headers['content-type'] || '')) {
       res.writeHead(403).end();
       return;
     }
@@ -298,7 +361,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, {
       app: 'eojeon', version: VERSION,
       demo: DEMO, defaultCwd: DEFAULT_CWD, claudeFound: !!CLAUDE, running: !!pty, info: ptyInfo,
-      home: os.homedir(), platform: process.platform, permissionModes: PERMISSION_MODES,
+      home: os.homedir(), platform: process.platform, permissionModes: PERMISSION_MODES, remote: REMOTE,
     });
   }
   if (p === '/api/config') {
@@ -336,19 +399,28 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   sendFile(res, file);
-});
+}
 
 // ---------- websocket ----------
 const wss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
-server.on('upgrade', (req, socket, head) => {
+function onUpgrade(req, socket, head) {
   // Cross-site WebSocket hijacking guard: a random web page must never be able to type into your terminal.
-  if (!allowedHost(req.headers.host || '') || !allowedOrigin(req.headers.origin || '')) {
+  const who = access(req);
+  if (!who || !sameOrigin(req, who)) {
     socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
     socket.destroy();
     return;
   }
   wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
-});
+}
+function makeServer() {
+  const s = http.createServer(handle);
+  s.on('upgrade', onUpgrade);
+  return s;
+}
+// always on 127.0.0.1 (hooks post there); with --host also on that address unless it already covers loopback
+const server = makeServer();
+const WILDCARD = HOST === '0.0.0.0' || HOST === '::';
 
 wss.on('connection', (ws) => {
   clients.add(ws);
@@ -399,8 +471,32 @@ function listen(port, tries = 10) {
     };
     server.once('error', onErr);
     server.once('listening', onOk);
-    server.listen(port, '127.0.0.1');
+    server.listen(port, WILDCARD ? HOST : '127.0.0.1');
   });
+}
+
+function listenAlso(port) {
+  return new Promise((resolve, reject) => {
+    const s = makeServer();
+    s.once('error', reject);
+    s.listen(port, HOST, () => resolve(s));
+  });
+}
+
+// addresses another device can use: Tailscale (100.64.0.0/10), LAN, and this computer's name
+function remoteUrls(port) {
+  const out = [];
+  if (!WILDCARD) out.push(HOST);
+  else {
+    for (const list of Object.values(os.networkInterfaces())) {
+      for (const a of list || []) if (a.family === 'IPv4' && !a.internal) out.push(a.address);
+    }
+    out.push(os.hostname().replace(/\.local$/, ''));
+  }
+  const ts = (a) => /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(a);
+  return [...new Set(out)]
+    .sort((a, b) => ts(b) - ts(a))
+    .map((h) => `http://${h.includes(':') ? `[${h}]` : h}:${port}/?key=${KEY}${ts(h) ? '   (Tailscale)' : ''}`);
 }
 
 function openBrowser(url) {
@@ -412,12 +508,27 @@ function openBrowser(url) {
 }
 
 PORT = await listen(WANT_PORT);
+if (REMOTE && !WILDCARD) {
+  try {
+    await listenAlso(PORT);
+  } catch (e) {
+    console.error(`  --host ${HOST}: ${e.message}`);
+    process.exit(1);
+  }
+}
 writeSettings(PORT);
 const url = `http://localhost:${PORT}/${DEMO ? '?demo=1' : ''}`;
 console.log(`\n  어전 · eojeon ${VERSION} ${DEMO ? '(demo)' : ''}`);
 console.log(`  ${url}`);
 console.log(`  claude: ${CLAUDE || '(not found)'}   folder: ${DEFAULT_CWD}`);
-console.log('  Everything stays on this machine (127.0.0.1). Ctrl+C to quit.\n');
+if (REMOTE) {
+  console.log(`\n  다른 기기에서 (--host ${HOST}) — 처음 한 번은 키가 붙은 주소로 여세요:`);
+  for (const u of remoteUrls(PORT)) console.log(`    ${u}`);
+  console.log('  ! 이 키를 가진 사람은 이 컴퓨터의 claude 터미널을 쓸 수 있습니다. 믿는 기기에서만 여세요. 키 바꾸기: --new-key');
+  console.log('  Ctrl+C to quit.\n');
+} else {
+  console.log('  Everything stays on this machine (127.0.0.1). Ctrl+C to quit.\n');
+}
 if (!NO_OPEN) openBrowser(url);
 
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {

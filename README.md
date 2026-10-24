@@ -61,6 +61,9 @@ npm start          # = node cli/eojeon.js
 | `--port <n>` | 포트 (기본 4747, 사용 중이면 다음 빈 포트) |
 | `--cwd <폴더>` | 시작 화면의 기본 작업 폴더 |
 | `--no-open` | 브라우저를 열지 않음 |
+| `eojeon watch` / `eojeon watch --off` | 어전 밖(다른 터미널·IDE)에서 쓰는 Claude Code 도 화면에 보이게 / 끄기. 아래 '이미 쓰던 Claude Code 보기' |
+| `--host <주소>` | 다른 기기(Tailscale·같은 와이파이)에서 접속 허용. 접속 키 필요. 아래 '다른 기기에서 보기' |
+| `--new-key` | `--host` 와 함께: 접속 키 새로 만들기(예전 주소는 막힘) |
 | `--help`, `--version` | 도움말, 버전 |
 
 `COURT_CLAUDE_BIN=/path/to/claude` 로 다른 claude 실행 파일을 쓸 수 있습니다.
@@ -106,7 +109,33 @@ npm start          # = node cli/eojeon.js
 - **시작 옵션**: 작업 폴더, 새 조회 / 이어서(`--continue`) / 지난 세션(`--resume <id>`), 권한 모드(`--permission-mode`: manual · acceptEdits · plan · auto · dontAsk — `bypassPermissions` 는 윤허 장면이 사라지고 위험해서 일부러 뺐습니다).
 - **장면**: 교지 반포 → 임금이 두루마리를 듦 · 도구 사용 → 담당 신하가 붓질하며 말풍선 · 서브에이전트 시작 → 그 관직의 신하가 입궐해 자기 책상으로, 끝나면 영의정께 보고하고 퇴궐 · 권한 요청 → 오른쪽 위에 "윤허를 청하옵니다" 패널과 **윤허 / 불허 / 보류** 도장(터미널 권한 창에 실제 키 전송: 윤허=`1`, 불허=`Esc`) · 실패 → 먹물 얼룩 말풍선.
 - 말풍선은 겹치지 않게 자리를 엇갈리고, 한 번에 3개까지만 보입니다. 나머지는 **사관 일지**(오른쪽)에 모두 남습니다.
-- **교지 쓰기 입력창**: 한글 입력이 편한 별도 입력창. Enter 로 터미널에 그대로 들어갑니다.
+- **입력은 터미널 하나**: 컴퓨터에서는 아래 터미널에 바로 칩니다. 휴대폰·태블릿(터치 화면)에서만 터미널 아래에 **교지 쓰기** 칸이 보입니다(터치 키보드로 터미널에 한글을 치기 어려워서). Enter 하면 터미널에 그대로 들어갑니다.
+
+### 이미 쓰던 Claude Code 보기 (`eojeon watch`)
+
+어전에서 띄운 claude 말고, 원래 쓰던 터미널·IDE 의 Claude Code 도 궁궐에 보이게 합니다.
+
+```bash
+npx eojeon-cli watch        # 한 번만. ~/.claude/settings.json 에 hook 추가(처음 한 번 settings.json.eojeon-backup 백업)
+npx eojeon-cli              # 어전을 켜 두면, 이후 시작하는 모든 Claude Code 세션이 실시간으로 보임
+npx eojeon-cli watch --off  # 끄기(우리 hook 만 지우고 나머지 설정은 그대로)
+```
+
+- **보기 전용**: 바깥 세션의 권한 요청은 패널에 "그 터미널에서 답하소서"로만 뜹니다. 도장이 그 터미널에 키를 보낼 수 없기 때문입니다. 사관 일지에는 `⇢ 폴더 이름` 이 붙습니다.
+- 이미 열려 있는 세션은 `/hooks` 를 한 번 열거나 다시 시작해야 새 hook 을 읽습니다.
+- 어전이 꺼져 있으면 hook 은 아무것도 하지 않고 바로 끝납니다. hook 파일은 `~/.eojeon/hook/` 에 복사해 두고 씁니다(npx 캐시 경로가 바뀌어도 동작).
+
+### 다른 기기에서 보기 (`--host`, Tailscale 등)
+
+```bash
+npx eojeon-cli --host 0.0.0.0     # 또는 Tailscale IP 하나만: --host 100.x.y.z
+```
+
+시작할 때 터미널에 `http://<주소>:4747/?key=…` 가 찍힙니다(Tailscale 주소가 맨 위). **처음 한 번은 키가 붙은 그 주소로 여세요.** 그 뒤에는 기기에 쿠키가 남아 `http://macmini:4747` 처럼 키 없이 열립니다(30일).
+
+- 키가 없으면 403. 키는 `~/.eojeon/remote-key` 에 있고 `--new-key` 로 바꿉니다.
+- **키를 가진 사람은 이 컴퓨터의 claude 터미널을 쓸 수 있습니다.** 공용 와이파이에서는 `0.0.0.0` 대신 Tailscale IP 만 지정하세요.
+- `--host` 없이 켜면 예전처럼 `127.0.0.1` 에만 열립니다.
 
 ## 작동 원리
 
@@ -117,7 +146,7 @@ npm start          # = node cli/eojeon.js
 
 ## 개인정보
 
-- **로컬 전용**: 서버는 `127.0.0.1` 에만 열립니다. 외부로 보내는 요청이 없습니다. xterm 은 npm 패키지에서, 글꼴은 패키지 안에서 직접 서빙합니다(CDN 없음, 추적 없음).
+- **로컬 전용**: 서버는 기본으로 `127.0.0.1` 에만 열립니다(`--host` 를 줄 때만 다른 기기에 열리고, 그때는 접속 키가 필요). 외부로 보내는 요청이 없습니다. xterm 은 npm 패키지에서, 글꼴은 패키지 안에서 직접 서빙합니다(CDN 없음, 추적 없음).
 - **비밀 가림**: 화면으로 가는 이벤트에는 파일 내용·도구 출력·전체 프롬프트가 없습니다. 프롬프트는 앞 60자, 명령은 첫 줄 56자까지, API 키·토큰·비밀번호·개인 키 모양 문자열은 `***` 로 가립니다.
 - **외부 연결 차단**: Host·Origin 을 검사해 다른 웹사이트가 내 터미널에 입력하거나 에이전트 파일을 쓰지 못하게 막고(DNS rebinding·CSWSH 방어), hook 수신은 실행마다 새로 만든 토큰으로만 받습니다.
 - 세션 목록은 `~/.claude/projects/` 기록 파일의 앞뒤만 읽기 전용으로 읽습니다.
@@ -185,7 +214,13 @@ claude plugin validate .
 2. **Claude Code plugin**: `/plugin marketplace add hiio420pr/eojeon` then `/plugin install eojeon@eojeon` (or on 2.1.275+: `/plugin install eojeon --marketplace hiio420pr/eojeon`). Then type `/eojeon` or "open the court". Third-party marketplaces don't auto-update by default: run `/plugin` → Marketplaces → eojeon → Enable auto-update (or `/plugin marketplace update eojeon`). You don't need both npx and the plugin. The plugin also provides the six agents as `eojeon:ijo` … `eojeon:gongjo`.
 3. **git clone**: `git clone https://github.com/hiio420pr/eojeon.git && cd eojeon && npm install && npm start`
 
-CLI: `eojeon [--port n] [--cwd dir] [--no-open]`, `eojeon demo`, `eojeon init [dir] [--pack yukjo|studio|all]` (never overwrites an existing file; prints what was added and skipped), `--help`, `--version`.
+**Watch sessions you already run elsewhere**: `npx eojeon-cli watch` adds hooks to `~/.claude/settings.json` (backup kept) so any Claude Code session (other terminals, IDEs) shows up in the court while it runs — watch-only, answer its prompts in its own terminal. `eojeon watch --off` removes only our hooks.
+
+**Other devices (Tailscale, LAN)**: `npx eojeon-cli --host 0.0.0.0` (or just your Tailscale IP). Open the printed `http://<addr>:4747/?key=…` once; the device keeps a cookie for 30 days. No key, no access. Whoever has the key can use your claude terminal; rotate with `--new-key`. Without `--host` it stays on 127.0.0.1.
+
+On a computer you type into the terminal only; the separate 교지 input appears on touch screens only.
+
+CLI: `eojeon [--port n] [--cwd dir] [--host addr] [--no-open]`, `eojeon watch [--off]`, `eojeon demo`, `eojeon init [dir] [--pack yukjo|studio|all]` (never overwrites an existing file; prints what was added and skipped), `--help`, `--version`.
 
 ### The Six Ministries (육조) — default subagents
 
@@ -206,7 +241,7 @@ Runs your **real** `claude` CLI in a PTY, shown in the browser with xterm.js. Ho
 
 ### Privacy
 
-Local only (binds to 127.0.0.1, no outbound requests, no CDN, no telemetry). Secrets masked before anything reaches the page. Host/Origin checks block other websites from typing into your terminal or writing agent files; hook posts need a per-run token.
+Local only by default (binds to 127.0.0.1; `--host` opens it to other devices behind an access key; no outbound requests, no CDN, no telemetry). Secrets masked before anything reaches the page. Host/Origin checks block other websites from typing into your terminal or writing agent files; hook posts need a per-run token.
 
 ### Requirements
 
