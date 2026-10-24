@@ -14,7 +14,7 @@ const [info] = JSON.parse(out);
 const files = info.files.map((f) => f.path).sort();
 
 // Every shipped file must be under one of these (README/LICENSE/package.json are added by npm itself).
-const ALLOWED = [/^bin\//, /^server\//, /^public\//, /^templates\/agents\/(yukjo|studio)\/[a-z-]+\.md$/, /^scripts\/fix-pty\.js$/,
+const ALLOWED = [/^cli\//, /^server\//, /^public\//, /^templates\/agents\/(yukjo|studio)\/[a-z-]+\.md$/, /^scripts\/fix-pty\.js$/,
   /^court\.config\.json$/, /^CHANGELOG\.md$/, /^README\.md$/, /^LICENSE$/, /^package\.json$/];
 const MUST = ['cli/eojeon.js', 'server/index.js', 'server/hook.js', 'server/agents.js', 'public/index.html',
   'public/fonts/LICENSE-Galmuri.txt', 'public/fonts/LICENSE-D2Coding.txt', 'templates/agents/yukjo/ijo.md', 'court.config.json', 'LICENSE'];
