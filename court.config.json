@@ -48,7 +48,7 @@
     "robe": "hong"
   },
   "officials": {
-    "_comment": "key = Claude Code agent_type (subagent_type). 'main' is Claude itself. side: east(왼쪽: 기획·숫자·글) / west(오른쪽: 만들기·알리기). emblem = 흉배 자리 직무 문양.",
+    "_comment": "key = Claude Code agent_type (subagent_type). Plugin agents arrive as \"<plugin>:<name>\" (e.g. eojeon:ijo) and are matched by the part after the last colon. main = Claude itself. side: east(왼쪽: 기획·숫자·글) / west(오른쪽: 만들기·지키기). seat 0~5 = fixed desk; no seat = first free desk on that side, else the courtyard. emblem = 흉배 자리 직무 문양. pack: yukjo(기본 육조) / studio(선택 팩).",
     "main": {
       "title": "영의정",
       "short": "영",
@@ -58,6 +58,66 @@
       "side": "east",
       "seat": 0
     },
+    "ijo": {
+      "title": "이조판서",
+      "short": "이",
+      "role": "일을 쪼개고 순서와 담당을 정한다",
+      "robe": "hong",
+      "emblem": "steps",
+      "side": "east",
+      "seat": 1,
+      "pack": "yukjo"
+    },
+    "hojo": {
+      "title": "호조판서",
+      "short": "호",
+      "role": "성능·비용·숫자를 먼저 잰다",
+      "robe": "hong",
+      "emblem": "abacus",
+      "side": "east",
+      "seat": 2,
+      "pack": "yukjo"
+    },
+    "yejo": {
+      "title": "예조판서",
+      "short": "예",
+      "role": "문서·주석·커밋 메시지를 쓴다",
+      "robe": "hong",
+      "emblem": "brush",
+      "side": "east",
+      "seat": 3,
+      "pack": "yukjo"
+    },
+    "byeongjo": {
+      "title": "병조판서",
+      "short": "병",
+      "role": "취약점과 비밀 노출을 막는다",
+      "robe": "hong",
+      "emblem": "shield",
+      "side": "west",
+      "seat": 0,
+      "pack": "yukjo"
+    },
+    "hyeongjo": {
+      "title": "형조판서",
+      "short": "형",
+      "role": "코드를 심리하고 버그를 수사한다",
+      "robe": "hong",
+      "emblem": "lens",
+      "side": "west",
+      "seat": 1,
+      "pack": "yukjo"
+    },
+    "gongjo": {
+      "title": "공조판서",
+      "short": "공",
+      "role": "코드를 짓고 테스트를 통과시킨다",
+      "robe": "hong",
+      "emblem": "hammer",
+      "side": "west",
+      "seat": 2,
+      "pack": "yukjo"
+    },
     "product-designer": {
       "title": "홍문관 부제학",
       "short": "홍",
@@ -65,25 +125,25 @@
       "robe": "hong",
       "emblem": "grid",
       "side": "east",
-      "seat": 1
+      "pack": "studio"
     },
     "data-analyst": {
-      "title": "호조판서",
-      "short": "호",
+      "title": "산학 교수",
+      "short": "산",
       "role": "숫자를 세고, 작은 숫자를 부풀리지 않는다",
-      "robe": "hong",
+      "robe": "cheong",
       "emblem": "abacus",
       "side": "east",
-      "seat": 2
+      "pack": "studio"
     },
     "pr-lead": {
-      "title": "예조판서",
-      "short": "예",
+      "title": "예조 참판",
+      "short": "참",
       "role": "바깥에 우리를 알린다",
       "robe": "hong",
       "emblem": "flag",
       "side": "east",
-      "seat": 3
+      "pack": "studio"
     },
     "copywriter": {
       "title": "승정원 승지",
@@ -92,7 +152,7 @@
       "robe": "hong",
       "emblem": "brush",
       "side": "east",
-      "seat": 4
+      "pack": "studio"
     },
     "branding-expert": {
       "title": "상서원 정",
@@ -101,7 +161,7 @@
       "robe": "cheong",
       "emblem": "seal",
       "side": "east",
-      "seat": 5
+      "pack": "studio"
     },
     "marketer": {
       "title": "평시서 령",
@@ -110,7 +170,7 @@
       "robe": "cheong",
       "emblem": "scale",
       "side": "west",
-      "seat": 0
+      "pack": "studio"
     },
     "sns-manager": {
       "title": "찰방",
@@ -119,16 +179,16 @@
       "robe": "cheong",
       "emblem": "hoof",
       "side": "west",
-      "seat": 1
+      "pack": "studio"
     },
     "apple-designer": {
       "title": "공조정랑",
-      "short": "공",
+      "short": "랑",
       "role": "애플 규격에 맞게 다듬는다",
       "robe": "cheong",
       "emblem": "square",
       "side": "west",
-      "seat": 2
+      "pack": "studio"
     },
     "uiux-expert": {
       "title": "선공감 주부",
@@ -137,7 +197,7 @@
       "robe": "cheong",
       "emblem": "beam",
       "side": "west",
-      "seat": 3
+      "pack": "studio"
     },
     "animation-expert": {
       "title": "장악원 악사",
@@ -146,7 +206,7 @@
       "robe": "nok",
       "emblem": "drum",
       "side": "west",
-      "seat": 4
+      "pack": "studio"
     },
     "video-producer": {
       "title": "도화서 화원",
@@ -155,7 +215,7 @@
       "robe": "nok",
       "emblem": "album",
       "side": "west",
-      "seat": 5
+      "pack": "studio"
     }
   },
   "guests": {
