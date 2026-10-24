@@ -5,8 +5,8 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-try {
-  const root = path.dirname(require.resolve('node-pty/package.json'));
+for (const mod of ['node-pty', '@homebridge/node-pty-prebuilt-multiarch']) try {
+  const root = path.dirname(require.resolve(`${mod}/package.json`));
   for (const dir of ['prebuilds', 'build/Release']) {
     const base = path.join(root, dir);
     if (!fs.existsSync(base)) continue;
@@ -20,5 +20,6 @@ try {
     walk(base);
   }
 } catch (e) {
-  console.warn('[eojeon] could not fix node-pty spawn-helper:', e.message);
+  // optional dependency not installed on this platform: nothing to fix
+  if (e.code !== 'MODULE_NOT_FOUND') console.warn(`[eojeon] could not fix ${mod} spawn-helper:`, e.message);
 }

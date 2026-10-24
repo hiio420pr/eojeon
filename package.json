@@ -1,36 +1,62 @@
 {
   "name": "eojeon",
   "version": "0.1.0",
-  "description": "Claude Code as a royal court: issue a decree, AI officials work, and they ask for your royal assent. Pixel-art Joseon throne hall around your real Claude Code CLI. Unofficial.",
+  "description": "Claude Code as a Joseon royal court: issue a decree, AI officials (subagents) work, and ask for your royal assent. Pixel-art throne hall around your real Claude Code CLI. Unofficial. · Claude Code를 어전회의로 — 교지를 내리면 AI 신하들이 일하고 윤허를 청한다. 비공식 도구.",
+  "keywords": [
+    "claude-code",
+    "claude",
+    "subagents",
+    "agents",
+    "hooks",
+    "terminal",
+    "pixel-art",
+    "visualization",
+    "korean",
+    "joseon"
+  ],
+  "homepage": "https://github.com/hiio420pr/eojeon",
+  "bugs": {
+    "url": "https://github.com/hiio420pr/eojeon/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hiio420pr/eojeon.git"
+  },
   "license": "MIT",
   "type": "module",
   "main": "server/index.js",
   "bin": {
-    "eojeon": "server/index.js"
+    "eojeon": "bin/eojeon.js"
   },
+  "files": [
+    "bin/",
+    "server/",
+    "public/",
+    "templates/",
+    "scripts/fix-pty.js",
+    "court.config.json",
+    "CHANGELOG.md"
+  ],
   "scripts": {
-    "start": "node server/index.js",
-    "demo": "node server/index.js --demo",
-    "check": "node --check server/index.js && node --check server/hook.js && node --check server/sessions.js && node --check server/sanitize.js",
+    "start": "node bin/eojeon.js",
+    "demo": "node bin/eojeon.js demo",
+    "test": "node --test",
+    "check": "node --check bin/eojeon.js && node --check server/index.js && node --check server/hook.js && node --check server/sessions.js && node --check server/sanitize.js && node --check server/agents.js",
+    "check-publish": "node scripts/check-publish.js",
+    "prepublishOnly": "npm test && node scripts/check-publish.js",
     "postinstall": "node scripts/fix-pty.js",
     "fake-hooks": "node scripts/fake-hooks.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",
-    "galmuri": "2.40.3",
-    "node-pty": "1.1.0",
     "ws": "8.22.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/hiio420pr/eojeon.git"
-  },
-  "homepage": "https://github.com/hiio420pr/eojeon",
-  "bugs": {
-    "url": "https://github.com/hiio420pr/eojeon/issues"
+  "optionalDependencies": {
+    "@homebridge/node-pty-prebuilt-multiarch": "0.14.1",
+    "node-pty": "1.1.0"
   }
 }
