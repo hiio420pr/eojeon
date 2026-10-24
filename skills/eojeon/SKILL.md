@@ -19,9 +19,9 @@ If the reply is JSON containing `"app":"eojeon"`, it is already up. Tell the use
 ## 2. Otherwise start it in the background
 Run this with the Bash tool's `run_in_background` option (it is a long-running server; never wait for it to exit):
 ```bash
-npx -y eojeon
+npx -y eojeon@latest
 ```
-It opens the browser by itself. Read the first lines of its output for the actual URL (it prints `http://localhost:<port>/`) and give that URL to the user. If the user asked for a demo without Claude, run `npx -y eojeon demo` instead.
+It opens the browser by itself. Read the first lines of its output for the actual URL (it prints `http://localhost:<port>/`) and give that URL to the user. If the user asked for a demo without Claude, run `npx -y eojeon@latest demo` instead.
 
 In the browser the user picks a project folder, an optional permission mode, and presses 입궐 (start). Their real `claude` CLI runs inside the page; nothing is sent anywhere else.
 
