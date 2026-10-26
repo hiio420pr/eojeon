@@ -35,7 +35,8 @@
     "templates/",
     "scripts/fix-pty.js",
     "court.config.json",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "start": "node cli/eojeon.js",
