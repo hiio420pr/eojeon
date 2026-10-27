@@ -2,7 +2,7 @@
 name: eojeon
 description: Open 어전 (eojeon), the pixel-art royal court view of Claude Code, in the browser. Use when the user types /eojeon or asks to "open the court", "어전 열어줘", "어전 띄워줘", or wants to watch subagents work as court officials. Also explains how to add the Six Ministries (육조) subagents to a project.
 argument-hint: "[init | demo | stop]"
-allowed-tools: Bash(curl -s http://localhost:*) Bash(npx -y eojeon-cli*) Bash(npx eojeon-cli*)
+allowed-tools: Bash(curl -s http://localhost:4747/api/info) Bash(npx -y eojeon-cli@0.5.1) Bash(npx -y eojeon-cli@0.5.1 demo) Bash(npx -y eojeon-cli@0.5.1 init)
 ---
 
 # 어전 열기 (Open the court)
