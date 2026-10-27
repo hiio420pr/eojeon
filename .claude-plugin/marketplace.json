@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "eojeon",
-      "source": "./",
+      "source": "./plugin",
       "description": "/eojeon opens the court in your browser; adds the Six Ministries (육조) subagents as eojeon:ijo … eojeon:gongjo."
     }
   ]

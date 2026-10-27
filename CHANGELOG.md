@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 
+## plugin 0.5.2 — 2026-10-27 (플러그인만, npm 은 0.5.1 그대로)
+- Claude 플러그인을 `plugin/` 폴더로 옮김(마켓플레이스 source `./plugin`). 설치 명령은 같다. 플러그인 설치 때 npm 패키지 의존성이 깔리지 않게 하고, 공식 디렉터리 제출 기준에 맞춤.
+- `/eojeon` 스킬의 `eojeon-cli` 실행을 `@latest` 대신 `@0.5.1` 로 고정. 플러그인 README 에 실행·읽기·쓰기·네트워크 동작을 모두 적음. 아이콘(御 도장) 추가.
+
 ## [0.5.1] - 2026-10-25
 
 ### Fixed

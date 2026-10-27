@@ -19,16 +19,16 @@ If the reply is JSON containing `"app":"eojeon"`, it is already up. Tell the use
 ## 2. Otherwise start it in the background
 Run this with the Bash tool's `run_in_background` option (it is a long-running server; never wait for it to exit):
 ```bash
-npx -y eojeon-cli@latest
+npx -y eojeon-cli@0.5.1
 ```
-It opens the browser by itself. Read the first lines of its output for the actual URL (it prints `http://localhost:<port>/`) and give that URL to the user. If the user asked for a demo without Claude, run `npx -y eojeon-cli@latest demo` instead.
+It opens the browser by itself. Read the first lines of its output for the actual URL (it prints `http://localhost:<port>/`) and give that URL to the user. If the user asked for a demo without Claude, run `npx -y eojeon-cli@0.5.1 demo` instead.
 
 In the browser the user picks a project folder, an optional permission mode, and presses 입궐 (start). Their real `claude` CLI runs inside the page; nothing is sent anywhere else.
 
 ## 3. 육조 들이기 (add the Six Ministries)
 If the user asks for `init` or for the default officials in their project:
 ```bash
-npx eojeon-cli init
+npx -y eojeon-cli@0.5.1 init
 ```
 This copies six subagents (ijo, hojo, yejo, byeongjo, hyeongjo, gongjo) into `./.claude/agents/`. Existing files with the same name are never overwritten; the command lists what it added and skipped. `--pack studio` adds 11 product/design/marketing roles, `--pack all` both.
 

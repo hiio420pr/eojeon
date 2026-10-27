@@ -1,0 +1,21 @@
+{
+  "name": "eojeon",
+  "displayName": "Eojeon",
+  "version": "0.5.2",
+  "description": "Open Claude Code as a pixel-art Joseon royal court in your browser (/eojeon): officials (subagents) walk in, work, and ask for your royal assent on permission prompts. Includes the Six Ministries subagents. Runs locally on 127.0.0.1. Unofficial, not affiliated with Anthropic.",
+  "author": {
+    "name": "hiio420pr",
+    "url": "https://github.com/hiio420pr"
+  },
+  "homepage": "https://github.com/hiio420pr/eojeon",
+  "repository": "https://github.com/hiio420pr/eojeon",
+  "license": "MIT",
+  "keywords": [
+    "visualization",
+    "subagents",
+    "korean",
+    "pixel-art",
+    "hooks"
+  ],
+  "icon": "./.claude-plugin/icon.png"
+}
