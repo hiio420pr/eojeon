@@ -17,5 +17,6 @@
     "pixel-art",
     "hooks"
   ],
-  "icon": "./.claude-plugin/icon.png"
+  "icon": "./.claude-plugin/icon.png",
+  "privacyPolicyUrl": "https://github.com/hiio420pr/eojeon/blob/main/PRIVACY.md"
 }

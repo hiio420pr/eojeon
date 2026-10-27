@@ -27,6 +27,10 @@ On Claude Code older than 2.1.275: `/plugin marketplace add hiio420pr/eojeon`, t
 
 Requirements: Node.js 18+ and Claude Code installed and logged in. Full documentation: https://github.com/hiio420pr/eojeon
 
+## Privacy
+
+No data is collected. Details: [Privacy](https://github.com/hiio420pr/eojeon/blob/main/PRIVACY.md)
+
 ## License
 
 MIT. Bundled with the npm package (not this plugin folder): Galmuri and D2Coding fonts under the SIL Open Font License 1.1.
